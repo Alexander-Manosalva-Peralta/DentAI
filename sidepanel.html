@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DentAI</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" x2="12" y1="19" y2="22"/>
+      </svg>
+    </div>
+    <span class="brand-name">DentAI</span>
+    <span id="host" class="brand-host"></span>
+  </div>
+  <div class="actions">
+    <button id="voiceToggleBtn" class="apple-pill-btn active" title="Alternar respuestas habladas">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+      <span id="voiceBtnText">Voz activa</span>
+    </button>
+    <a href="#" id="optLink" class="apple-icon-btn" title="Configuración de DentAI">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<!-- Conexión con Google Gemini API -->
+<div id="aiBar" class="ai-bar">
+  <div id="aiConfigBox" class="apple-card ai-config-box">
+    <div class="ai-title">
+      <span class="ai-label">Google Gemini API</span>
+      <a href="https://aistudio.google.com/app/apikey" target="_blank" class="free-link">Obtener clave gratis</a>
+    </div>
+    <div class="ai-input-row">
+      <input type="password" id="geminiQuickKey" placeholder="Pega tu Gemini API Key">
+      <button id="saveKeyBtn" class="apple-primary-btn small">Conectar</button>
+    </div>
+    <div class="ai-hint">1,500 peticiones diarias gratuitas. Filtra ruido de fondo y estructura datos automáticamente.</div>
+  </div>
+  <div id="aiConnectedBox" class="apple-card ai-connected-box hidden">
+    <div class="ai-active-status">
+      <span class="ai-chip">Gemini Activo</span>
+      <span class="ai-sub">Filtrado inteligente y extracción clínica</span>
+    </div>
+    <button id="editKeyBtn" class="apple-secondary-btn small" title="Cambiar clave de IA">Cambiar</button>
+  </div>
+</div>
+
+<!-- Hero DentAI: Orb de Escucha Activa Inteligente (Estilo Apple) -->
+<div class="apple-card orb-hero-card">
+  <div class="orb-container-wrap">
+    <!-- Ondas concéntricas acústicas (Ripples de sonido activo) -->
+    <div class="sound-ripples" id="soundRipples">
+      <div class="ripple r1"></div>
+      <div class="ripple r2"></div>
+      <div class="ripple r3"></div>
+    </div>
+
+    <!-- El Orbe Principal de DentAI -->
+    <div class="ai-orb" id="aiOrb" title="Clic para pausar o reactivar escucha">
+      <!-- Anillo exterior estilo Siri / Apple Intelligence con gradiente iridiscente -->
+      <div class="orb-halo-ring"></div>
+
+      <!-- Esfera de cristal con reflejo especular -->
+      <div class="orb-sphere">
+        <div class="orb-glass-shine"></div>
+        <div class="orb-core">
+          <!-- Canvas de Onda de Sonido Fluida (Modo Escucha Activa, como en Imagen 2) -->
+          <canvas id="orbWaveCanvas" width="180" height="180"></canvas>
+
+          <!-- Cara del Robot con Ojos Cápsula (Modo Standby, como en Imágenes 1, 3 y 4) -->
+          <div class="orb-face" id="orbFace">
+            <div class="visor-glow"></div>
+            <div class="orb-eye eye-left"></div>
+            <div class="orb-eye eye-right"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado y Controles Integrados -->
+  <div class="orb-meta">
+    <div class="orb-status-row">
+      <div id="pulseBadge" class="pulse-badge" title="Clic para pausar o reactivar">
+        <span class="dot"></span>
+        <span id="pulseText">Escucha activa</span>
+      </div>
+      <span id="modeTag" class="mode-tag">Modo formulario</span>
+    </div>
+    <div id="status" class="status-line">Iniciando reconocimiento de voz…</div>
+    <div id="meter"><i id="meterBar"></i></div>
+  </div>
+</div>
+
+<!-- Propuesta de llenado clínico -->
+<section class="proposal-section">
+  <div class="section-header">
+    <h3>Propuesta clínica <span id="count"></span></h3>
+  </div>
+  <div id="pending" class="apple-card pending-box empty">Esperando dictado (ej: "DNI 72736289", "fecha nacimiento 22 02 2006")…</div>
+  <div id="result"></div>
+  <div class="assistive-bar">
+    <button id="applyBtn" class="apple-primary-btn" title="O di 'confirmar' por voz">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Confirmar</span>
+    </button>
+    <button id="discardBtn" class="apple-secondary-btn" title="O di 'descartar' por voz">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>Descartar</span>
+    </button>
+  </div>
+</section>
+
+<!-- Transcripción en vivo -->
+<section class="transcript-section">
+  <div class="section-header">
+    <h3>Transcripción en tiempo real</h3>
+  </div>
+  <div id="transcript" class="apple-card transcript-box empty">—</div>
+</section>
+
+<!-- Comandos de voz disponibles -->
+<details class="apple-details commands-details">
+  <summary>Comandos de voz disponibles</summary>
+  <div class="command-list">
+    <div class="cmd-row">
+      <span class="cmd-pill">DNI [número]</span>
+      <span class="cmd-desc">Busca en BD/RENIEC y llena 11 campos completos de golpe</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Baja / Sube</span>
+      <span class="cmd-desc">Desplaza el formulario suavemente (Manos Libres)</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Ve a guardar / Guardar</span>
+      <span class="cmd-desc">Presiona directamente el botón Guardar en Smile</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Ve a limpiar / Limpiar</span>
+      <span class="cmd-desc">Presiona directamente el botón Limpiar/Reset en Smile</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Nuevo preregistro</span>
+      <span class="cmd-desc">Abre el formulario de registro en Smile sin mouse</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Corrige nombre a [nombre]</span>
+      <span class="cmd-desc">Reconcilia con la grafía de la BD oficial y descarta charlas</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Cambiar [campo] [valor]</span>
+      <span class="cmd-desc">Ej: "cambiar celular 999111222", "cambiar dirección"</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Tipo de identificación [tipo]</span>
+      <span class="cmd-desc">Pasaporte, Carnet de Extranjería, DNI o RUC</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-pill">Confirmar / Descartar</span>
+      <span class="cmd-desc">Aplica o borra los datos de la propuesta</span>
+    </div>
+  </div>
+</details>
+
+<!-- Pestañas detectadas en Smile -->
+<details class="apple-details">
+  <summary>Pestañas detectadas en Smile</summary>
+  <div id="tabsDiscovered" class="tabs-discovered">
+    <span class="empty">Detectando pestañas de Smile…</span>
+  </div>
+</details>
+
+<!-- Campos detectados -->
+<details class="apple-details">
+  <summary>Campos detectados en el formulario activo</summary>
+  <div id="fields" class="fields"></div>
+</details>
+
+<script src="common.js"></script>
+<script src="inject.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

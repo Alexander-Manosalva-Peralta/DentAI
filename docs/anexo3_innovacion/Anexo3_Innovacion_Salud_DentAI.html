@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Anexo 3: Proyecto de Innovación en Salud – DentAI UPCH</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      margin: 30px auto;
+      max-width: 860px;
+      color: #212529;
+      line-height: 1.55;
+      background: #f8f9fa;
+    }
+    .sheet {
+      background: #ffffff;
+      padding: 50px 60px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #9B1B30;
+      padding-bottom: 18px;
+      margin-bottom: 25px;
+    }
+    .header h1 {
+      color: #9B1B30;
+      font-size: 19px;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .header h2 {
+      color: #0F2C59;
+      font-size: 15px;
+      margin: 0 0 5px 0;
+      font-weight: 700;
+    }
+    .header p {
+      color: #6c757d;
+      font-size: 13px;
+      margin: 0;
+    }
+    .doc-title {
+      text-align: center;
+      font-size: 17px;
+      font-weight: 700;
+      color: #0F2C59;
+      margin: 20px 0 6px 0;
+      text-transform: uppercase;
+    }
+    .doc-category {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #9B1B30;
+      margin-bottom: 25px;
+    }
+    h3 {
+      color: #9B1B30;
+      font-size: 14.5px;
+      border-bottom: 1.5px solid #e9ecef;
+      padding-bottom: 6px;
+      margin-top: 28px;
+      text-transform: uppercase;
+    }
+    h4 {
+      color: #0F2C59;
+      font-size: 13.5px;
+      margin: 18px 0 6px 0;
+    }
+    p, li {
+      font-size: 13px;
+      text-align: justify;
+      color: #333333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 12.5px;
+    }
+    th {
+      background-color: #9B1B30;
+      color: #ffffff;
+      padding: 9px 12px;
+      border: 1px solid #ced4da;
+      text-align: left;
+      font-weight: 600;
+    }
+    th.navy {
+      background-color: #0F2C59;
+    }
+    td {
+      padding: 9px 12px;
+      border: 1px solid #ced4da;
+      vertical-align: top;
+      color: #212529;
+    }
+    td.label {
+      background-color: #f1f3f5;
+      font-weight: 600;
+      color: #0F2C59;
+      width: 28%;
+    }
+    tr:nth-child(even) td:not(.label) {
+      background-color: #fafbfc;
+    }
+    .highlight-card {
+      background: #fdf7f7;
+      border-left: 4px solid #9B1B30;
+      padding: 12px 18px;
+      margin: 15px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .print-btn {
+      display: block;
+      width: 240px;
+      margin: 0 auto 20px auto;
+      padding: 11px 16px;
+      background: #0071e3;
+      color: white;
+      text-align: center;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,113,227,0.25);
+    }
+    .print-btn:hover {
+      background: #005bb5;
+    }
+    @media print {
+      .print-btn { display: none; }
+      body { margin: 0; background: #fff; }
+      .sheet { box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
+
+<div class="sheet">
+  <div class="header">
+    <h1>Universidad Peruana Cayetano Heredia</h1>
+    <h2>Facultad de Estomatología</h2>
+    <p>Unidad Integrada de Gestión de Investigación, Ciencia y Tecnología (UIGICT)<br>
+    <strong>FONDO DE APOYO A LA INVESTIGACIÓN 2027 (FAI 2027)</strong></p>
+  </div>
+
+  <div class="doc-title">Anexo 3: Proyecto de Innovación en Salud</div>
+  <div class="doc-category">Categoría: Especial – Innovación en Salud / Estudiantes - Docentes</div>
+
+  <table>
+    <tr>
+      <th colspan="2" class="navy">INFORMACIÓN OFICIAL DEL PROYECTO</th>
+    </tr>
+    <tr>
+      <td class="label">Nombre del proyecto de innovación:</td>
+      <td><strong>DentAI: Asistente Clínico Inteligente Manos Libres con Inteligencia Artificial Neuro-Simbólica y Modelos de Lenguaje (LLM) para el Registro Clínico Seguro en el Software Smile de la Clínica Dental Docente UPCH</strong></td>
+    </tr>
+    <tr>
+      <td class="label">Entidad y Sede de Aplicación:</td>
+      <td>Clínica Dental Docente de la Universidad Peruana Cayetano Heredia (Sede Central San Martín de Porres y Sede Asistencial Miraflores).</td>
+    </tr>
+    <tr>
+      <td class="label">Descripción de la innovación:</td>
+      <td>
+        DentAI es una solución médica y tecnológica pionera que fusiona <strong>Modelos de Lenguaje de Gran Escala (LLM Google Gemini 1.5)</strong> y <strong>Procesamiento de Lenguaje Natural (NLP/ASR)</strong> con un <strong>motor determinista de validación simbólica y manipulación DOM en tiempo real</strong>, materializado como una extensión web para Google Chrome (Manifest V3).<br><br>
+        Su ventaja diferencial es su <em>integración no invasiva de cero fricción</em>: actúa como una capa de asistencia directa sobre el software oficial de la universidad (<strong>Smile</strong>) sin requerir modificaciones en servidores centrales ni costosas APIs de terceros. El profesional dicta en lenguaje natural libre (DNI, anamnesis, antecedentes, odontograma y facturación); el LLM interpreta la semántica clínica, descarta ruidos ambientales del consultorio (turbinas, eyectores, charlas), y el motor inyecta los datos con verificación estricta de tipos en los formularios de Smile, respondiendo auditivamente mediante síntesis de voz (TTS).
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Problema que soluciona el proyecto:</td>
+      <td>
+        <strong>1. Contaminación cruzada e infección nosocomial en el box dental:</strong> El teclado y mouse son fómites de alta colonización por patógenos orales y aerosoles de saliva/sangre (<em>S. mutans</em>, <em>S. aureus</em>, <em>P. gingivalis</em>) que se transfieren al manipular la computadora con guantes de examen durante la consulta.<br>
+        <strong>2. Ineficiencia temporal y sobrecarga administrativa:</strong> El llenado manual toma de 12 a 18 minutos por paciente, restando tiempo valioso a la atención odontológica y la docencia tutelada.<br>
+        <strong>3. Errores tipográficos y de auditoría:</strong> Datos erróneos en DNI, nombres complejos y mezclas involuntarias entre la dirección del paciente y los datos de facturación electrónica.<br>
+        <strong>4. Residuos plásticos hospitalarios:</strong> Consumo indiscriminado de fundas plásticas desechables de corta duración.
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Ventajas de la innovación presentada:</td>
+      <td>
+        • <strong>100% Manos Libres (Voice-First):</strong> Cero contacto físico con el hardware de cómputo durante el tratamiento odontológico.<br>
+        • <strong>Reducción de más del 70%</strong> en el tiempo de admisión y registro clínico en Smile.<br>
+        • <strong>Arquitectura Neuro-Simbólica Segura:</strong> Previene alucinaciones de la IA mediante reglas deterministas de seguridad clínica y aislamiento estricto de campos de facturación.<br>
+        • <strong>Costo cero de infraestructura:</strong> Funciona directamente en las computadoras existentes en los boxes dentales de la UPCH.<br>
+        • <strong>Escalabilidad probada:</strong> Impacto directo en más de 10,000 atenciones clínicas anuales en las sedes de la universidad.
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Número de integrantes:</td>
+      <td>
+        <strong>3 integrantes multidisciplinarios:</strong><br>
+        1. <strong>Investigador Principal (Tesista):</strong> Johan Alexander Manosalva Peralta (Estudiante regular de pregrado, Facultad de Estomatología UPCH).<br>
+        2. <strong>Docente Asesor Clínico:</strong> Especialista de la Facultad de Estomatología UPCH en Odontología Integral y Bioseguridad.<br>
+        3. <strong>Co-Investigador Tecnológico:</strong> Especialista en Informática Biomédica e Inteligencia Artificial en Salud.
+      </td>
+    </tr>
+  </table>
+
+  <div class="highlight-card">
+    <p style="margin: 0; font-size: 12.5px;">
+      <strong>Certificación del Proyecto:</strong> El presente documento corresponde al formato oficial Anexo 3 para la postulación a fondos concursables de innovación y desarrollo tecnológico en salud, alineado con las prioridades de bioseguridad e informática médica de la Universidad Peruana Cayetano Heredia.
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

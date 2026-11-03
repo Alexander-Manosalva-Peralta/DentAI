@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Permiso de micrófono – DentAI</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      padding: 28px 32px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    p {
+      color: #86868b;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 12px 0 20px;
+    }
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: 0;
+      background: #0071e3;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    button:hover {
+      background: #0077ed;
+    }
+    button:active {
+      background: #0062c4;
+    }
+    #m {
+      margin-top: 18px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Permitir micrófono para DentAI</h2>
+    <p>Pulsa el botón y acepta el aviso del navegador. Después puedes cerrar esta pestaña y volver a DentAI.</p>
+    <button id="b">Permitir micrófono</button>
+    <div id="m"></div>
+  </div>
+  <script src="mic.js"></script>
+</body>
+</html>

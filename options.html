@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DentAI – Configuración</title>
+  <style>
+    :root {
+      --apple-bg: #f5f5f7;
+      --apple-card: #ffffff;
+      --apple-text: #1d1d1f;
+      --apple-secondary: #86868b;
+      --apple-tertiary: #a1a1a6;
+      --apple-line: rgba(0, 0, 0, 0.08);
+      --apple-line-strong: rgba(0, 0, 0, 0.14);
+      --apple-blue: #0071e3;
+      --apple-blue-hover: #0077ed;
+      --apple-blue-active: #0062c4;
+      --apple-green: #34c759;
+      --apple-green-bg: rgba(52, 199, 89, 0.12);
+      --apple-green-text: #1b873f;
+      --apple-red: #df3f34;
+      --apple-radius-card: 14px;
+      --apple-radius-btn: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--apple-text);
+      background: var(--apple-bg);
+      padding-bottom: 40px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--apple-line);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: #1d1d1f;
+      color: #ffffff;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--apple-text);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--apple-secondary);
+      margin-left: 6px;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 24px auto 0;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: var(--apple-card);
+      border: 1px solid var(--apple-line);
+      border-radius: var(--apple-radius-card);
+      padding: 20px 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: rgba(0, 0, 0, 0.04);
+      color: var(--apple-text);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--apple-text);
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--apple-secondary);
+      margin: 0 0 14px;
+      line-height: 1.4;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 5px;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--apple-text);
+      letter-spacing: -0.01em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--apple-line);
+      border-radius: var(--apple-radius-btn);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--apple-text);
+      background: #fafafc;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--apple-blue);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+    }
+
+    .row-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+      padding: 6px 0;
+    }
+
+    .row-check input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--apple-blue);
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .row-check label {
+      margin: 0;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button {
+      font-family: inherit;
+      padding: 9px 16px;
+      border-radius: var(--apple-radius-btn);
+      border: 1px solid var(--apple-line-strong);
+      background: #ffffff;
+      color: var(--apple-text);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      margin: 6px 6px 0 0;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: #f5f5f7;
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    button.p {
+      background: var(--apple-blue);
+      color: #ffffff;
+      border: 0;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 113, 227, 0.2);
+    }
+
+    button.p:hover {
+      background: var(--apple-blue-hover);
+    }
+
+    button.p:active {
+      background: var(--apple-blue-active);
+    }
+
+    small {
+      color: var(--apple-secondary);
+      display: block;
+      margin-top: 5px;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    small a {
+      color: var(--apple-blue);
+      text-decoration: none;
+    }
+
+    small a:hover {
+      text-decoration: underline;
+    }
+
+    #msg {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--apple-green-text);
+    }
+
+    .badge-free {
+      background: var(--apple-green-bg);
+      color: var(--apple-green-text);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand-icon">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" x2="12" y1="19" y2="22"/>
+    </svg>
+  </div>
+  <div>
+    <span class="brand-title">DentAI</span>
+    <span class="brand-sub">Configuración del Asistente Clínico</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Sección Base de Datos Clínica de Pacientes -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Base de Datos de Pacientes (Triaje / Recepción)</h3>
+    </div>
+    <p class="card-desc">
+      Al dictar el DNI (ej: "DNI 72736289"), DentAI busca al paciente en esta base de datos y completa automáticamente todos sus campos en Smile (Nombres, Apellidos, Fecha Nacimiento, Género, Celular, Correo, Dirección, Distrito).
+    </p>
+
+    <label>Origen de la Base de Datos</label>
+    <select id="dbProvider">
+      <option value="local">Base de Datos Local (Memoria, sin servidores, lista para pruebas)</option>
+      <option value="supabase">Supabase (PostgreSQL en la nube – Tiempo real multi-usuario)</option>
+      <option value="custom_api">API REST personalizada (Servidor interno o laptop de la clínica)</option>
+    </select>
+
+    <div id="supabaseConfigBox" style="margin-top:10px;">
+      <label>URL de Supabase</label>
+      <input id="supabaseUrl" placeholder="https://tu-proyecto.supabase.co">
+      <label>Clave pública / Anon Key de Supabase</label>
+      <input id="supabaseKey" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…">
+      <small>Crea una tabla <code>pacientes</code> en <a href="https://supabase.com" target="_blank">Supabase.com</a> con las columnas: <code>dni, nombres, apellido_paterno, apellido_materno, genero, fecha_nacimiento, celular, email, direccion, distrito</code>.</small>
+    </div>
+
+    <div id="customApiBox" style="margin-top:10px;">
+      <label>URL de la API REST local</label>
+      <input id="customApiUrl" placeholder="http://localhost:3000/api/pacientes">
+      <small>Debe responder JSON al hacer <code>GET /api/pacientes?dni=XXXXXXXX</code>.</small>
+    </div>
+
+    <div id="localDbBox" style="margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <label style="margin:0;">Pacientes registrados en la Base de Datos Local (JSON)</label>
+        <button type="button" id="resetDbBtn" style="font-size:11px;padding:4px 10px;margin:0;">Restablecer datos de prueba</button>
+      </div>
+      <textarea id="localPatientsDb" rows="7" style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;margin-top:6px;" spellcheck="false"></textarea>
+      <small>Incluye al paciente de prueba <b>YOJAN MANOSALVA PERALTA (DNI 72736289)</b> con correo <code>yojan.manosalva@upch.pe</code>.</small>
+    </div>
+  </div>
+
+  <!-- Sección Consulta DNI RENIEC -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="3"/>
+          <circle cx="9" cy="10" r="2"/>
+          <line x1="15" x2="17" y1="8" y2="8"/>
+          <line x1="15" x2="17" y1="12" y2="12"/>
+          <line x1="7" x2="17" y1="16" y2="16"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Consulta DNI (RENIEC Perú) – Respaldo Oficial</h3>
+    </div>
+    <p class="card-desc">
+      Si un paciente no está en la base de datos de triaje, DentAI consulta el padrón oficial de RENIEC para autocompletar su nombre y apellidos exactos.
+    </p>
+
+    <div class="row-check">
+      <input type="checkbox" id="dniAutoQuery">
+      <label for="dniAutoQuery">Autocompletar Nombre y Apellidos al dictar DNI</label>
+    </div>
+
+    <label>Proveedor de API DNI</label>
+    <select id="dniApiProvider">
+      <option value="decolecta">Decolecta / Apis.net.pe (Recomendado)</option>
+      <option value="perudevs">PeruDevs</option>
+      <option value="apisperu">APIs Perú</option>
+    </select>
+
+    <label>Token de la API DNI</label>
+    <input id="dniApiToken" type="password" autocomplete="off" placeholder="Token Bearer de Decolecta o Apis.net.pe">
+    <small>Puedes obtener tu token gratuito en <a href="https://decolecta.com" target="_blank">Decolecta.com</a> o <a href="https://apis.net.pe" target="_blank">Apis.net.pe</a>.</small>
+  </div>
+
+  <!-- Sección Filtro de Ruido Ambiental y Wake Word -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Filtro de Ruido y Charlas de Fondo</h3>
+    </div>
+    <p class="card-desc">
+      En el consultorio dental hay pacientes, asistentes y turbinas ruidosas. Con este filtro, el micrófono ignora las conversaciones de fondo y solo responde cuando tú le hablas directamente.
+    </p>
+
+    <div class="row-check">
+      <input type="checkbox" id="wakeWordEnabled">
+      <label for="wakeWordEnabled">Activar filtro por palabra clave (Wake Word)</label>
+    </div>
+
+    <label>Palabra clave de activación</label>
+    <input id="wakeWord" placeholder="DentAI" value="DentAI">
+    <small>Ejemplo: Di "DentAI DNI 45123456" o "DentAI ve a preregistro". Todo lo que no empiece con esta palabra será ignorado.</small>
+
+    <div class="row-check" style="margin-top:12px;">
+      <input type="checkbox" id="noiseFilter">
+      <label for="noiseFilter">Supresión activa de eco y ganancia adaptativa</label>
+    </div>
+  </div>
+
+  <!-- Inteligencia Artificial y STT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+          <path d="M2 12h20"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Inteligencia Artificial y Motores de Voz</h3>
+    </div>
+
+    <label>Proveedor de Inteligencia Artificial (Extracción semántica)</label>
+    <select id="aiProvider">
+      <option value="gemini">Google Gemini (Recomendado – Rápido, alta precisión odontológica)</option>
+      <option value="openai">OpenAI (GPT-4o-mini)</option>
+      <option value="local">Motor Local (Sin clave API – Reglas)</option>
+    </select>
+
+    <label>API Key de Google Gemini <span class="badge-free">Gratis</span></label>
+    <input id="geminiApiKey" type="password" autocomplete="off" placeholder="AIzaSy…">
+    <small>Obtén tu clave gratuita de 1,500 solicitudes diarias en <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</small>
+
+    <label>API Key de OpenAI (Opcional)</label>
+    <input id="apiKey" type="password" autocomplete="off" placeholder="sk-…">
+
+    <label>Motor de Voz (Dictado a texto)</label>
+    <select id="sttEngine">
+      <option value="webspeech">Web Speech API de Chrome (Nativo, Manos Libres continuo, Sin costo)</option>
+      <option value="whisper">OpenAI Whisper (Requiere API Key de OpenAI)</option>
+    </select>
+  </div>
+
+  <!-- Manos Libres y Bioseguridad -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" x2="12" y1="19" y2="22"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Manos Libres y Bioseguridad</h3>
+    </div>
+
+    <div class="row-check">
+      <input type="checkbox" id="autoListen">
+      <label for="autoListen">Iniciar escucha automáticamente al abrir DentAI (Cero botones)</label>
+    </div>
+    <div class="row-check">
+      <input type="checkbox" id="voiceFeedback">
+      <label for="voiceFeedback">Respuestas habladas del asistente (TTS: confirma cambios y llenado)</label>
+    </div>
+
+    <label>Operador (Nombre o usuario para el registro clínico)</label>
+    <input id="operador" placeholder="Ej: Dr. Pérez / Asistente María">
+
+    <label>Vocabulario odontológico</label>
+    <textarea id="vocab" rows="3"></textarea>
+
+    <p style="margin-top:16px;">
+      <button class="p" id="save">Guardar cambios</button>
+      <button id="mic">Verificar permiso de micrófono</button>
+    </p>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" x2="8" y1="13" y2="13"/>
+          <line x1="16" x2="8" y1="17" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <h3 class="card-title">Registro de uso clínico (RF06 / RF08)</h3>
+    </div>
+    <button id="csv">Exportar a CSV</button>
+    <button id="clear">Borrar historial</button>
+    <span id="n" style="font-size:12px;color:var(--apple-secondary);margin-left:8px;"></span>
+  </div>
+
+</div>
+
+<script src="common.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
