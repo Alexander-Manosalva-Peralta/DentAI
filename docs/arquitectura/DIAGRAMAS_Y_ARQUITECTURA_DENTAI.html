@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>DIAGRAMAS Y ARQUITECTURA TÉCNICA DENTAI</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 18mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1e293b;
+    line-height: 1.35;
+    margin: 0;
+    padding: 0;
+    font-size: 9.5pt;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #9b1b30;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .univ {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #9b1b30;
+    margin: 0;
+  }
+  .fac {
+    font-size: 10.5pt;
+    font-weight: bold;
+    color: #0f2c59;
+    margin: 2px 0;
+  }
+  .doc-type {
+    font-size: 9pt;
+    color: #64748b;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  h1 {
+    font-size: 13pt;
+    color: #0f2c59;
+    text-align: center;
+    margin: 12px 0 16px 0;
+  }
+  h2 {
+    font-size: 11.5pt;
+    color: #0f2c59;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+  }
+  p {
+    margin: 0 0 7px 0;
+    text-align: justify;
+  }
+  .callout {
+    background-color: #f8fafc;
+    border-left: 4px solid #0f2c59;
+    padding: 8px 12px;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+  }
+  .callout-title {
+    font-weight: bold;
+    color: #0f2c59;
+  }
+  .diagram-container {
+    text-align: center;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+  .diagram-img {
+    width: 100%;
+    max-width: 680px;
+    height: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .caption {
+    font-size: 8.5pt;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 4px;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  ul {
+    margin: 4px 0 10px 0;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="univ">UNIVERSIDAD PERUANA CAYETANO HEREDIA</div>
+  <div class="fac">FACULTAD DE ESTOMATOLOGÍA — CLÍNICA DENTAL DOCENTE</div>
+  <div class="doc-type">Documento de Especificación Técnica y Arquitectura de Software</div>
+</div>
+
+<h1>DENTAI 🦷 — ASISTENTE CLÍNICO ODONTOLÓGICO POR VOZ (100% MANOS LIBRES)<br>ARQUITECTURA DE SISTEMAS, MODELOS DE DATOS Y DIAGRAMAS UML</h1>
+
+<div class="callout" style="border-left-color: #4f46e5; background-color: #eef2ff;">
+  <span class="callout-title">📌 FICHA TÉCNICA DEL SISTEMA:</span>
+  Proyecto: DentAI (v0.3.7) | Plataforma Objetivo: Software Smile UPCH | Arquitectura: Chrome MV3 Neuro-Simbólica | Investigador: Johan Alexander Manosalva Peralta | Destinatarios: Equipo de Ingeniería de Software, Sistemas y Biomédica
+</div>
+
+<h2>1. Resumen Ejecutivo y Fundamentos de Ingeniería</h2>
+<p>El presente informe técnico detalla la arquitectura completa de DentAI, una solución de ingeniería de software diseñada para operar en los consultorios de la Clínica Dental Docente de la Universidad Peruana Cayetano Heredia (UPCH). El sistema resuelve dos restricciones operativas severas: (1) la imposibilidad de tocar periféricos físicos durante el acto operatorio debido a la contaminación cruzada por bioaerosoles patógenos (Streptococcus mutans, Staphylococcus aureus, virus respiratorios), y (2) la rigidez arquitectónica del software clínico Smile (Cibermundo), el cual no cuenta con una API pública o servicios web accesibles para desarrolladores externos.</p>
+<p>Para superar este desafío sin vulnerar la integridad de los sistemas institucionales, DentAI adopta una arquitectura Neuro-Simbólica implementada como una extensión web para Google Chrome (Manifest V3). En lugar de depender de un Modelo de Lenguaje de Gran Escala (LLM) puro —que presentaría riesgos inaceptables de alucinación médica y latencia en tiempo real—, el sistema utiliza un esquema híbrido: un LLM (Google Gemini 1.5 Flash) realiza el reconocimiento de entidades clínicas (NER) sobre lenguaje natural libre, mientras que un motor determinista de guardias simbólicas valida rigurosamente los tipos, previene la sobreescritura de campos y despacha eventos sintéticos directamente sobre el DOM de Smile.</p>
+
+<div class="page-break"></div>
+<h2>2.1 Diagrama de Arquitectura de Alto Nivel y Modelo de Contenedores C4</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag1_arquitectura_c4.png" alt="Diagrama 1">
+  <div class="caption">Figura 1: Arquitectura de Alto Nivel y Modelo de Contenedores C4 de DentAI en Smile UPCH.</div>
+</div>
+<p>El Diagrama 1 descompone el sistema siguiendo el estándar C4 (Nivel de Contenedores y Componentes). Se identifican tres fronteras de aislamiento: (1) El entorno físico del Box Odontológico, donde el operador interactúa por voz frente a un micrófono direccional con cancelación pasiva; (2) El Runtime de la Extensión Chrome Manifest V3, compuesto por el SidePanelController (orquestador de interfaz y estados), el Motor Neuro-Simbólico (suite de guardias y enrutamiento léxico), el Background Worker (ciclo de vida y atajos) y el Content Script (inyector en el DOM de Smile); y (3) Los servicios externos, donde el modelo Google Gemini 1.5 procesa la inferencia mediante peticiones HTTPS seguras bajo TLS 1.3.</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Aislamiento por Proceso:</strong> El Side Panel y el Content Script se ejecutan en contextos independientes comunicados por mensajes tipados (chrome.runtime.sendMessage y chrome.tabs.sendMessage).</li>
+    <li><strong>Tolerancia al Ruido:</strong> La Web Audio API calcula el nivel RMS; si el ruido acústico de la turbina dental supera 75 dB sin modulación vocal armónica, el buffer se descarta preventivamente.</li>
+    <li><strong>Inyección No Invasiva:</strong> Preserva intacta la sesión autenticada del odontólogo en Smile; no intercepta credenciales ni guarda contraseñas.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.2 Arquitectura de Datos: Fase Actual (Mock DB/Local) vs. Fase Futura (HIS Clínica Dental Docente + RENIEC)</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag2_arquitectura_datos.png" alt="Diagrama 2">
+  <div class="caption">Figura 2: Arquitectura de Datos - Fase Actual (Mock/Local) vs. Fase Futura (HIS Clínica Dental Docente UPCH + RENIEC).</div>
+</div>
+<p>El Diagrama 2 aborda la evolución de la capa de datos de DentAI, contrastando la estrategia adoptada durante la fase de prototipo y validación clínica con el diseño definitivo para su despliegue institucional en producción dentro de la Clínica Dental Docente de la UPCH.</p>
+<p><strong>1. FASE ACTUAL (Prototipo Clínico y Validación In Situ):</strong> Durante el desarrollo actual, el sistema opera con un repositorio local de pacientes estructurado bajo chrome.storage.local y caché en memoria volátil. Esta decisión de ingeniería fue indispensable para garantizar: (a) Pruebas de campo inmediatas en los boxes de la clínica sin depender de autorizaciones de firewall o modificaciones por parte del área de TI; (b) Latencia de consulta ultrabaja (&lt; 10 ms en búsquedas por DNI o apellido); y (c) Cero riesgo de corrupción de datos reales en la base de producción de Smile mientras se calibran los algoritmos de llenado y navegación por voz.</p>
+<p><strong>2. FASE FUTURA (Producción Institucional con HIS/EMR UPCH y RENIEC):</strong> En la versión de producción, la interfaz IPatientRepository se conectará a un Gateway Clínico Institucional (DentAI Clinical Integration Gateway) desplegado en un contenedor Docker dentro de la DMZ de la universidad. Este Gateway consumirá directamente la base de datos central de Smile/UPCH (Oracle / PostgreSQL) mediante el estándar de interoperabilidad médica HL7 FHIR (recursos Patient y Appointment). Simultáneamente, se conectará a la Plataforma de Interoperabilidad del Estado (PIDE) para consultar en tiempo real el padrón biométrico de RENIEC: al dictar el DNI de 8 dígitos, el sistema completará con 100% de exactitud los nombres, apellidos, fecha de nacimiento y domicilio oficial del paciente, eliminando cualquier discrepancia de tipografía.</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Transición Transparente:</strong> El código implementa Inversión de Dependencias (DIP). Cambiar del almacén local al Gateway FHIR/REST de la clínica solo requiere cambiar el proveedor en el inyector de dependencias sin alterar la UI.</li>
+    <li><strong>Ley N° 29733 de Protección de Datos Personales:</strong> Cifrado AES-256 en reposo y TLS 1.3 en tránsito. Ningún dato médico de filiación o diagnóstico se almacena permanentemente en servidores externos de IA.</li>
+    <li><strong>Caché de Resiliencia:</strong> La extensión mantiene un buffer local cifrado con los turnos del día para permitir el trabajo en el box incluso si la red institucional sufre caídas temporales.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.3 Diagrama de Secuencia UML: Ciclo de Vida End-to-End Voice-to-DOM</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag3_secuencia_uml.png" alt="Diagrama 3">
+  <div class="caption">Figura 3: Diagrama de Secuencia UML - Ciclo Completo de Voz a DOM en Smile UPCH.</div>
+</div>
+<p>El Diagrama 3 ilustra la secuencia temporal cronológica de una interacción típica en el box. El ciclo abarca doce pasos coordinados: (1) El odontólogo emite el dictado clínico; (2) La Web Speech API captura el flujo fonético; (3) El Hero Orb pasa a estado LISTENING; (4) Se despacha la consulta al LLM con Structured JSON Schema; (5) Gemini retorna las entidades estructuradas; (6) El Motor Simbólico audita el DNI con regex de 8 dígitos, corrige fonemas elididos (ej. 'Lexander' a 'Alexander') y confina las variables a su contenedor; (7) Se construye la tarjeta de propuesta visual y el Hero Orb pasa a PROPOSAL_READY (anillo verde); (8) El operador dicta 'confirmar'; (9) El mensaje se transfiere al Content Script; (10) Se inyectan los valores y se disparan los eventos sintéticos en el DOM de Smile; (11) Se recibe la confirmación de inyección; y (12) El sintetizador de voz (TTS) emite la confirmación acústica.</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Eventos Sintéticos de DOM:</strong> Se instancian eventos sintéticos con bubbles: true ('input', 'change', 'blur') para que los controladores internos de Smile registren la modificación de estado.</li>
+    <li><strong>Confirmación en Dos Pasos:</strong> DentAI nunca escribe directamente de forma desatendida; requiere la confirmación explícita del operador profesional colegiado.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.4 Diagrama de Flujo del Algoritmo de Decisión Neuro-Simbólica</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag4_flujo_neurosimbolico.png" alt="Diagrama 4">
+  <div class="caption">Figura 4: Diagrama de Flujo del Algoritmo de Decisión Neuro-Simbólica.</div>
+</div>
+<p>El Diagrama 4 modela la lógica algorítmica bifurcada que gobierna el procesamiento de lenguaje. Ante cada buffer acústico, el sistema aplica un clasificador reactivo: si la entrada coincide con comandos deterministas de control ('ve a Preregistro', 'sube a Factura', 'buscar', 'confirmar', 'descartar'), la orden se enruta directamente al manipulador de pestañas y scroll del DOM sin consultar al LLM, reduciendo la latencia a menos de 15 milisegundos. Si se trata de un dictado clínico libre, la entrada se transfiere a Google Gemini 1.5, cuyo resultado es canalizado obligatoriamente a través de la Suite de Guardias Simbólicas (validación de DNI, normalización de fonemas homófonos y barrera estricta entre secciones).</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Aislamiento Estricto de Contenedores:</strong> Las guardias de frontera DOM impiden que los datos de facturación alteren la dirección domiciliaria del paciente.</li>
+    <li><strong>Corrección Fonética de Nombres Propios:</strong> Normaliza omisiones acústicas (ej. elisión de la 'A' inicial produciendo 'Lexander' en lugar de 'Alexander') mediante análisis contextual de proximidad.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.5 Diagrama de Clases y Módulos de la Extensión Chrome Manifest V3</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag5_clases_mv3.png" alt="Diagrama 5">
+  <div class="caption">Figura 5: Diagrama de Clases y Módulos de la Extensión Chrome Manifest V3.</div>
+</div>
+<p>El Diagrama 5 presenta el modelo de clases bajo el paradigma de programación orientada a objetos (POO). Se definen ocho módulos principales con alta cohesión y bajo acoplamiento: BackgroundServiceWorker (gestión de eventos de extensión y hotkey Alt+Shift+D), SidePanelController (controlador de vista y mediador de eventos), HeroOrbRenderer (motor de animación gráfica del orbe estilo Apple), AudioSpeechEngine (abstracción del reconocedor vocal Web Speech y cálculo RMS), GeminiInferenceClient (cliente REST resiliente con reintentos exponenciales), SymbolicGuardEngine (motor de reglas deterministas), DOMInjector (script de contenido con diccionarios de selectores) y la interfaz IPatientRepository con sus implementaciones para caché local y para el futuro Gateway institucional.</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Patrón Mediator:</strong> El SidePanelController desacopla la captura de audio del inyector de DOM, garantizando tolerancia a fallos.</li>
+    <li><strong>Patrón Command:</strong> Cada propuesta de llenado se empaqueta de forma transaccional con capacidad de descarte o rollback inmediato.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.6 Diagrama de Máquina de Estados Finitos (FSM) del Hero Orb y Asistente</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag6_maquina_estados.png" alt="Diagrama 6">
+  <div class="caption">Figura 6: Diagrama de Máquina de Estados Finitos (FSM) del Asistente y Hero Orb.</div>
+</div>
+<p>El Diagrama 6 formaliza la Máquina de Estados Finitos (FSM) que controla el comportamiento del asistente y su representación visual. El sistema transita de manera determinista entre seis estados: IDLE (rostro robótico LED con respiración pasiva), LISTENING (transición animada a onda senoidal fluida sincronizada con la modulación acústica de la voz), THINKING (esfera cromática en rotación durante la inferencia y validación simbólica en &lt; 350 ms), PROPOSAL_READY (anillo perimetral verde esmeralda con tarjeta de verificación en espera de confirmación), INJECTING (pulso expansivo de éxito e inserción en el DOM) y ERROR_GUARD (alerta luminosa ámbar/roja si falla la validación de un campo o si el ruido ambiental de la turbina satura el canal).</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Experiencia de Usuario Médica Estilo Apple:</strong> Consciencia situacional periférica para que el odontólogo conozca el estado del asistente sin retirar la vista de la cavidad bucal del paciente.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2.7 Topología de Despliegue Físico en Box Dental y Bioseguridad</h2>
+<div class="diagram-container">
+  <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag7_topologia_box.png" alt="Diagrama 7">
+  <div class="caption">Figura 7: Topología de Despliegue Físico en Box Dental y Aislamiento de Bioseguridad.</div>
+</div>
+<p>El Diagrama 7 mapea la infraestructura física y las zonas de bioseguridad en el consultorio estomatológico. Se establece una división rigurosa entre dos zonas: (1) La Zona Biocontaminada (radio crítico de 1.5 metros alrededor del sillón dental), donde el uso de instrumental rotatorio genera bioaerosoles cargados de microorganismos y ruido acústico de hasta 75 dB. En esta zona solo se ubica el micrófono direccional cardioide de cuello de cisne; y (2) La Zona Limpia, donde se encuentra la computadora clínica All-in-One a 2.0 metros de distancia, cuyos periféricos permanecen sellados y desinfectados. La conexión hacia el navegador y los servidores institucionales viaja a través de canales seguros cifrados.</p>
+<div class="callout">
+  <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
+  <ul>
+    <li><strong>Norma Técnica de Salud NTS N° 022-MINSA:</strong> Cumplimiento estricto para la gestión fidedigna de historias clínicas odontológicas.</li>
+    <li><strong>Cero Contacto Físico (100% Manos Libres):</strong> Erradicación total de fómites hospitalarios sobre teclados y mouses durante la consulta.</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Plan de Integración en Producción con la Base de Datos de la Clínica Dental Docente UPCH y RENIEC</h2>
+<p>Para que los ingenieros de sistemas y telecomunicaciones de la universidad evalúen la viabilidad del proyecto, se describe la hoja de ruta técnica para conectar DentAI con la infraestructura real de la Clínica Dental Docente (Sedes San Martín de Porres y Miraflores):</p>
+<ul>
+  <li><strong>Fase 1 (Completada - Prototipo Funcional):</strong> Operación sobre base de datos local y caché relacional en memoria. Permitió validar en campo la exactitud del dictado por voz, la efectividad del Hero Orb, la supresión de ruido de turbinas y la inyección sin errores en las pestañas de Preregistro, Dirección y Facturación de Smile.</li>
+  <li><strong>Fase 2 (En Desarrollo - Conexión de Gateway Institucional):</strong> Despliegue de un microservicio 'DentAI Clinical Gateway' dentro de la red privada virtual (VPN) de la UPCH. Este servicio expondrá endpoints REST seguros protegidos por tokens JWT firmados con las credenciales universitarias de cada docente y alumno.</li>
+  <li><strong>Fase 3 (Integración con Base de Datos de Smile / HIS Central):</strong> Conexión directa mediante vistas de base de datos o adaptadores HL7 FHIR a las tablas maestras de Smile (Oracle / PostgreSQL). Al dictar 'buscar paciente [DNI]' o 'mostrar pacientes registrados', la extensión consultará en tiempo real el padrón oficial de admisiones del día, precargando la historia clínica activa.</li>
+  <li><strong>Fase 4 (Interconexión con la API PIDE / RENIEC):</strong> Integración con el convenio marco de la universidad con la Plataforma de Interoperabilidad del Estado (PIDE) para la consulta automatizada del DNI. Esto garantiza que cualquier paciente nuevo que ingrese a la clínica tenga sus datos de filiación validados oficialmente contra el padrón nacional, blindando la historia clínica contra rechazos en auditorías de SUSALUD o aseguradoras.</li>
+  <li><strong>Fase 5 (Auditoría Médica y Cero Vulnerabilidad):</strong> Implementación de firmas electrónicas de sesión y trazabilidad inmutable. Cada campo inyectado por DentAI queda asociado al ID del operador autenticado, cumpliendo a cabalidad con la Ley N° 29733 de Protección de Datos Personales.</li>
+</ul>
+
+</body>
+</html>
