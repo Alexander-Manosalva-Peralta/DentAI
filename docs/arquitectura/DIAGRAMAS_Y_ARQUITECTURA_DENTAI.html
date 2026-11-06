@@ -6,74 +6,74 @@
 <style>
   @page {
     size: A4 portrait;
-    margin: 16mm;
+    margin: 15mm;
   }
   * { box-sizing: border-box; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     color: #1e293b;
-    line-height: 1.32;
+    line-height: 1.3;
     margin: 0;
     padding: 0;
-    font-size: 9pt;
+    font-size: 8.8pt;
   }
   .header {
     text-align: center;
     border-bottom: 2px solid #9b1b30;
-    padding-bottom: 10px;
-    margin-bottom: 14px;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
   }
   .univ {
-    font-size: 12.5pt;
+    font-size: 12pt;
     font-weight: bold;
     color: #9b1b30;
     margin: 0;
   }
   .fac {
-    font-size: 10pt;
+    font-size: 9.8pt;
     font-weight: bold;
     color: #0f2c59;
     margin: 2px 0;
   }
   .doc-type {
-    font-size: 8.5pt;
+    font-size: 8.2pt;
     color: #64748b;
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   h1 {
-    font-size: 12pt;
+    font-size: 11.5pt;
     color: #0f2c59;
     text-align: center;
-    margin: 10px 0 14px 0;
+    margin: 10px 0 12px 0;
   }
   h2 {
-    font-size: 11pt;
+    font-size: 10.5pt;
     color: #0f2c59;
     border-bottom: 1.5px solid #cbd5e1;
     padding-bottom: 3px;
-    margin-top: 18px;
+    margin-top: 16px;
     margin-bottom: 6px;
     page-break-after: avoid;
   }
   h3 {
-    font-size: 9.8pt;
+    font-size: 9.5pt;
     color: #0f2c59;
-    margin-top: 12px;
+    margin-top: 10px;
     margin-bottom: 4px;
     page-break-after: avoid;
   }
   p {
-    margin: 0 0 6px 0;
+    margin: 0 0 5px 0;
     text-align: justify;
   }
   .callout {
     background-color: #f8fafc;
     border-left: 4px solid #0f2c59;
-    padding: 7px 11px;
-    margin: 8px 0 12px 0;
-    font-size: 8.8pt;
+    padding: 6px 10px;
+    margin: 8px 0 10px 0;
+    font-size: 8.5pt;
   }
   .callout-title {
     font-weight: bold;
@@ -102,7 +102,7 @@
     page-break-before: always;
   }
   ul {
-    margin: 3px 0 8px 0;
+    margin: 3px 0 7px 0;
     padding-left: 18px;
   }
   li {
@@ -118,16 +118,16 @@
   <div class="doc-type">Documento de Especificación Técnica y Arquitectura de Software</div>
 </div>
 
-<h1>DENTAI 🦷 — ASISTENTE CLÍNICO ODONTOLÓGICO POR VOZ (100% MANOS LIBRES)<br>ARQUITECTURA DE SISTEMAS, CIBERSEGURIDAD, PROTECCIÓN DE DATOS Y DIAGRAMAS UML</h1>
+<h1>DENTAI 🦷 — ASISTENTE CLÍNICO ODONTOLÓGICO POR VOZ (100% MANOS LIBRES)<br>ARQUITECTURA DE SISTEMAS, CONEXIÓN A BD CENTRAL UPCH, CIBERSEGURIDAD Y ZERO-CONFIG API KEYS</h1>
 
 <div class="callout" style="border-left-color: #4f46e5; background-color: #eef2ff;">
   <span class="callout-title">📌 FICHA TÉCNICA DEL SISTEMA:</span>
-  Proyecto: DentAI (v0.3.7) | Plataforma Objetivo: Software Smile UPCH | Arquitectura: Chrome MV3 Neuro-Simbólica | Investigador: Johan Alexander Manosalva Peralta | Destinatarios: Dirección de Tecnologías de la Información (DTI UPCH) y Comité Evaluador de Ingenieros
+  Proyecto: DentAI (v0.3.7) | Plataforma Objetivo: Software Smile UPCH | Arquitectura: Chrome MV3 + Backend Gateway Institucional | Investigador: Johan Alexander Manosalva Peralta | Destinatarios: Dirección de Tecnologías de la Información (DTI UPCH) y Comité Evaluador de Ingenieros
 </div>
 
 <h2>1. Resumen Ejecutivo y Fundamentos de Ingeniería</h2>
 <p>El presente informe técnico detalla la arquitectura completa de DentAI, una solución de ingeniería de software diseñada para operar en los consultorios de la Clínica Dental Docente de la Universidad Peruana Cayetano Heredia (UPCH). El sistema resuelve dos restricciones operativas severas: (1) la imposibilidad de tocar periféricos físicos durante el acto operatorio debido a la contaminación cruzada por bioaerosoles patógenos (Streptococcus mutans, Staphylococcus aureus, virus respiratorios), y (2) la rigidez arquitectónica del software clínico Smile (Cibermundo), el cual no cuenta con una API pública o servicios web accesibles para desarrolladores externos.</p>
-<p>Para superar este desafío sin vulnerar la integridad de los sistemas institucionales, DentAI adopta una arquitectura Neuro-Simbólica implementada como una extensión web para Google Chrome (Manifest V3). En lugar de depender de un Modelo de Lenguaje de Gran Escala (LLM) puro —que presentaría riesgos inaceptables de alucinación médica y latencia en tiempo real—, el sistema utiliza un esquema híbrido: un LLM (Google Gemini 1.5 Flash) realiza el reconocimiento de entidades clínicas (NER) sobre lenguaje natural libre, mientras que un motor determinista de guardias simbólicas valida rigurosamente los tipos, previene la sobreescritura de campos y despacha eventos sintéticos directamente sobre el DOM de Smile.</p>
+<p>Para superar este desafío sin vulnerar la integridad de los sistemas institucionales, DentAI adopta una arquitectura Neuro-Simbólica implementada como una extensión web para Google Chrome (Manifest V3) respaldada por un Backend Gateway Institucional en la Intranet de la UPCH. En lugar de exponer credenciales de base de datos o exigir claves API en cada uno de los múltiples boxes de la clínica, el sistema centraliza la seguridad: la clave API de Google Gemini y las credenciales de la Base de Datos Central residen exclusivamente en el servidor central de la universidad, permitiendo que la extensión opere con cero configuración en cada puesto odontológico y sin salir a la tienda pública de Google.</p>
 
 <div class="page-break"></div>
 <h2>2.1 Diagrama de Arquitectura de Alto Nivel y Modelo de Contenedores C4</h2>
@@ -135,31 +135,37 @@
   <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag1_arquitectura_c4.png" alt="Diagrama 1">
   <div class="caption">Figura 1: Arquitectura de Alto Nivel y Modelo de Contenedores C4 de DentAI en Smile UPCH.</div>
 </div>
-<p>El Diagrama 1 descompone el sistema siguiendo el estándar C4 (Nivel de Contenedores y Componentes). Se identifican tres fronteras de aislamiento: (1) El entorno físico del Box Odontológico, donde el operador interactúa por voz frente a un micrófono direccional con cancelación pasiva; (2) El Runtime de la Extensión Chrome Manifest V3, compuesto por el SidePanelController (orquestador de interfaz y estados), el Motor Neuro-Simbólico (suite de guardias y enrutamiento léxico), el Background Worker (ciclo de vida y atajos) y el Content Script (inyector en el DOM de Smile); y (3) Los servicios externos, donde el modelo Google Gemini 1.5 procesa la inferencia mediante peticiones HTTPS seguras bajo TLS 1.3.</p>
+<p>El Diagrama 1 descompone el sistema siguiendo el estándar C4 (Nivel de Contenedores y Componentes). Se identifican tres fronteras de aislamiento: (1) El entorno físico del Box Odontológico, donde el operador interactúa por voz frente a un micrófono direccional con cancelación pasiva; (2) El Runtime de la Extensión Chrome Manifest V3, compuesto por el SidePanelController (orquestador de interfaz y estados), el Motor Neuro-Simbólico (suite de guardias y enrutamiento léxico), el Background Worker (ciclo de vida y atajos) y el Content Script (inyector en el DOM de Smile); y (3) Los servicios externos institucionales, donde el Backend Gateway UPCH procesa la inferencia y las consultas seguras hacia la Base de Datos Central.</p>
 <div class="callout">
   <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
   <ul>
-    <li><strong>Aislamiento por Proceso:</strong> El Side Panel y el Content Script se ejecutan en contextos independientes comunicados por mensajes tipados (chrome.runtime.sendMessage y chrome.tabs.sendMessage).</li>
+    <li><strong>Aislamiento por Proceso:</strong> El Side Panel y el Content Script se ejecutan en contextos independientes comunicados por mensajes tipados.</li>
     <li><strong>Tolerancia al Ruido:</strong> La Web Audio API calcula el nivel RMS; si el ruido acústico de la turbina dental supera 75 dB sin modulación vocal armónica, el buffer se descarta preventivamente.</li>
     <li><strong>Inyección No Invasiva:</strong> Preserva intacta la sesión autenticada del odontólogo en Smile; no intercepta credenciales ni guarda contraseñas.</li>
   </ul>
 </div>
 
 <div class="page-break"></div>
-<h2>2.2 Arquitectura de Datos: Fase Actual (Mock DB/Local) vs. Fase Futura (HIS Clínica Dental Docente + RENIEC)</h2>
+<h2>2.2 Arquitectura de Datos: Fase Actual (Mock Local) vs. Fase 2 Producción (Backend UPCH: Conexión BD + Zero-Config API Keys)</h2>
 <div class="diagram-container">
   <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag2_arquitectura_datos.png" alt="Diagrama 2">
-  <div class="caption">Figura 2: Arquitectura de Datos - Fase Actual (Mock/Local) vs. Fase Futura (HIS Clínica Dental Docente UPCH + RENIEC).</div>
+  <div class="caption">Figura 2: Arquitectura de Datos - Fase Actual (Mock Local) vs. Fase 2 Producción (Backend UPCH: Conexión BD + Zero-Config API Keys).</div>
 </div>
-<p>El Diagrama 2 aborda la evolución de la capa de datos de DentAI, contrastando la estrategia adoptada durante la fase de prototipo y validación clínica con el diseño definitivo para su despliegue institucional en producción dentro de la Clínica Dental Docente de la UPCH.</p>
-<p><strong>1. FASE ACTUAL (Prototipo Clínico y Validación In Situ):</strong> Durante el desarrollo actual, el sistema opera con un repositorio local de pacientes estructurado bajo chrome.storage.local y caché en memoria volátil. Esta decisión de ingeniería fue indispensable para garantizar: (a) Pruebas de campo inmediatas en los boxes de la clínica sin depender de autorizaciones de firewall o modificaciones por parte del área de TI; (b) Latencia de consulta ultrabaja (&lt; 10 ms en búsquedas por DNI o apellido); y (c) Cero riesgo de corrupción de datos reales en la base de producción de Smile mientras se calibran los algoritmos de llenado y navegación por voz.</p>
-<p><strong>2. FASE FUTURA (Producción Institucional con HIS/EMR UPCH y RENIEC):</strong> En la versión de producción, la interfaz IPatientRepository se conectará a un Gateway Clínico Institucional (DentAI Clinical Integration Gateway) desplegado en un contenedor Docker dentro de la DMZ de la universidad. Este Gateway consumirá directamente la base de datos central de Smile/UPCH (Oracle / PostgreSQL) mediante el estándar de interoperabilidad médica HL7 FHIR (recursos Patient y Appointment). Simultáneamente, se conectará a la Plataforma de Interoperabilidad del Estado (PIDE) para consultar en tiempo real el padrón biométrico de RENIEC: al dictar el DNI de 8 dígitos, el sistema completará con 100% de exactitud los nombres, apellidos, fecha de nacimiento y domicilio oficial del paciente, eliminando cualquier discrepancia de tipografía.</p>
+<p>El Diagrama 2 aborda la solución de ingeniería diseñada específicamente para resolver los dos desafíos planteados por la DTI: (1) ¿Cómo se conecta la base de datos de la universidad sin comprometer la seguridad en una extensión cliente? y (2) ¿Cómo se gestionan las claves API en decenas de boxes sin exigir que cada alumno u odontólogo ingrese una clave personal ni exponerla públicamente?</p>
+<p><strong>1. FASE ACTUAL (Prototipo y Validación Local):</strong> La extensión opera con un catálogo sintético desidentificado en memoria volátil de cada box. Esto permitió validar la ergonomía, la cancelación de ruido y la inyección DOM sin interferir con la base de producción de la universidad.</p>
+<p><strong>2. FASE DE PRODUCCIÓN (Conexión Centralizada a BD UPCH y Zero-Config):</strong> Una extensión de navegador NUNCA debe conectarse directamente a un puerto SQL (Oracle/PostgreSQL) porque cualquier usuario podría inspeccionar el código y robar la contraseña de la base de datos de la universidad. La solución estándar de la industria consiste en implementar un 'DentAI Backend Gateway' (microservicio en Node.js o FastAPI) alojado en la Intranet de la UPCH:</p>
+<ul>
+  <li>La extensión en el box solo hace peticiones HTTPS internas al Gateway (ej: <code>https://dentai-api.cayetano.edu.pe/pacientes?dni=...</code>).</li>
+  <li>Solo el servidor Backend conoce la cadena de conexión y credenciales de la Base de Datos Central de la universidad, consultando de forma segura mediante un pool de conexiones controlado.</li>
+  <li><strong>Solución al problema de la API Key:</strong> La Clave API Máster de Google Gemini reside ÚNICAMENTE en las variables de entorno del servidor Backend. Ninguna PC de ningún box almacena la clave API; los boxes operan con CERO CONFIGURACIÓN ('Zero-Config').</li>
+  <li><strong>Despliegue Privado:</strong> La extensión no requiere publicarse en la Chrome Web Store pública; se distribuye en Modo Desarrollador Institucional cargado por red o como Extensión Privada de Google Workspace restringida al dominio @upch.pe.</li>
+</ul>
 <div class="callout">
   <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
   <ul>
-    <li><strong>Transición Transparente:</strong> El código implementa Inversión de Dependencias (DIP). Cambiar del almacén local al Gateway FHIR/REST de la clínica solo requiere cambiar el proveedor en el inyector de dependencias sin alterar la UI.</li>
-    <li><strong>Ley N° 29733 de Protección de Datos Personales:</strong> Cifrado AES-256 en reposo y TLS 1.3 en tránsito. Ningún dato médico de filiación o diagnóstico se almacena permanentemente en servidores externos de IA.</li>
-    <li><strong>Caché de Resiliencia:</strong> La extensión mantiene un buffer local cifrado con los turnos del día para permitir el trabajo en el box incluso si la red institucional sufre caídas temporales.</li>
+    <li><strong>Seguridad de Nivel Bancario:</strong> Las credenciales de la base de datos jamás tocan las computadoras de los boxes clínicos.</li>
+    <li><strong>Blindaje de la Clave API:</strong> Cero riesgo de fuga, copiado o sobrecosto por alumnos; el servidor central de la universidad aplica cuotas y límites por box.</li>
+    <li><strong>Despliegue Transparente:</strong> El odontólogo abre Chrome en cualquier box de la facultad y DentAI funciona inmediatamente sin pedir configuración técnica.</li>
   </ul>
 </div>
 
@@ -169,7 +175,7 @@
   <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag3_secuencia_uml.png" alt="Diagrama 3">
   <div class="caption">Figura 3: Diagrama de Secuencia UML - Ciclo Completo de Voz a DOM en Smile UPCH.</div>
 </div>
-<p>El Diagrama 3 ilustra la secuencia temporal cronológica de una interacción típica en el box. El ciclo abarca doce pasos coordinados: (1) El odontólogo emite el dictado clínico; (2) La Web Speech API captura el flujo fonético; (3) El Hero Orb pasa a estado LISTENING; (4) Se despacha la consulta al LLM con Structured JSON Schema; (5) Gemini retorna las entidades estructuradas; (6) El Motor Simbólico audita el DNI con regex de 8 dígitos, corrige fonemas elididos (ej. 'Lexander' a 'Alexander') y confina las variables a su contenedor; (7) Se construye la tarjeta de propuesta visual y el Hero Orb pasa a PROPOSAL_READY (anillo verde); (8) El operador dicta 'confirmar'; (9) El mensaje se transfiere al Content Script; (10) Se inyectan los valores y se disparan los eventos sintéticos en el DOM de Smile; (11) Se recibe la confirmación de inyección; y (12) El sintetizador de voz (TTS) emite la confirmación acústica.</p>
+<p>El Diagrama 3 ilustra la secuencia temporal cronológica de una interacción típica en el box. El ciclo abarca doce pasos coordinados: (1) El odontólogo emite el dictado clínico; (2) La Web Speech API captura el flujo fonético; (3) El Hero Orb pasa a estado LISTENING; (4) Se despacha la consulta al Backend Gateway; (5) Gemini retorna las entidades estructuradas; (6) El Motor Simbólico audita el DNI con regex de 8 dígitos, corrige fonemas elididos (ej. 'Lexander' a 'Alexander') y confina las variables a su contenedor; (7) Se construye la tarjeta de propuesta visual y el Hero Orb pasa a PROPOSAL_READY (anillo verde); (8) El operador dicta 'confirmar'; (9) El mensaje se transfiere al Content Script; (10) Se inyectan los valores y se disparan los eventos sintéticos en el DOM de Smile; (11) Se recibe la confirmación de inyección; y (12) El sintetizador de voz (TTS) emite la confirmación acústica.</p>
 <div class="callout">
   <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
   <ul>
@@ -184,7 +190,7 @@
   <img class="diagram-img" src="file:///C:/Users/User/.gemini/antigravity/brain/24db0eeb-d9f9-48a4-9286-7f55a8bb0b2e/scratch/documentos_fai2027/diagrams/diag4_flujo_neurosimbolico.png" alt="Diagrama 4">
   <div class="caption">Figura 4: Diagrama de Flujo del Algoritmo de Decisión Neuro-Simbólica.</div>
 </div>
-<p>El Diagrama 4 modela la lógica algorítmica bifurcada que gobierna el procesamiento de lenguaje. Ante cada buffer acústico, el sistema aplica un clasificador reactivo: si la entrada coincide con comandos deterministas de control ('ve a Preregistro', 'sube a Factura', 'buscar', 'confirmar', 'descartar'), la orden se enruta directamente al manipulador de pestañas y scroll del DOM sin consultar al LLM, reduciendo la latencia a menos de 15 milisegundos. Si se trata de un dictado clínico libre, la entrada se transfiere a Google Gemini 1.5, cuyo resultado es canalizado obligatoriamente a través de la Suite de Guardias Simbólicas (validación de DNI, normalización de fonemas homófonos y barrera estricta entre secciones).</p>
+<p>El Diagrama 4 modela la lógica algorítmica bifurcada que gobierna el procesamiento de lenguaje. Ante cada buffer acústico, el sistema aplica un clasificador reactivo: si la entrada coincide con comandos deterministas de control ('ve a Preregistro', 'sube a Factura', 'buscar', 'confirmar', 'descartar'), la orden se enruta directamente al manipulador de pestañas y scroll del DOM sin consultar al LLM, reduciendo la latencia a menos de 15 milisegundos. Si se trata de un dictado clínico libre, la entrada se transfiere al Backend Gateway, cuyo resultado es canalizado obligatoriamente a través de la Suite de Guardias Simbólicas (validación de DNI, normalización de fonemas homófonos y barrera estricta entre secciones).</p>
 <div class="callout">
   <span class="callout-title">CRITERIOS DE INGENIERÍA Y ANÁLISIS TÉCNICO:</span>
   <ul>
@@ -238,60 +244,42 @@
 </div>
 
 <div class="page-break"></div>
-<h2>3. Plan de Integración en Producción con la Base de Datos de la Clínica Dental Docente UPCH y RENIEC</h2>
-<p>Para que los ingenieros de sistemas y telecomunicaciones de la universidad evalúen la viabilidad del proyecto, se describe la hoja de ruta técnica para conectar DentAI con la infraestructura real de la Clínica Dental Docente (Sedes San Martín de Porres y Miraflores):</p>
+<h2>3. Plan de Integración en Producción con la Base de Datos Central de la Universidad (UPCH)</h2>
+<p>Para responder a los requerimientos de la Dirección de Tecnologías de la Información (DTI) sobre cómo conectar la extensión a la base de datos de pacientes de la universidad y cómo desplegarla masivamente en los boxes, se establece la siguiente hoja de ruta técnica:</p>
 <ul>
-  <li><strong>Fase 1 (Completada - Prototipo Funcional):</strong> Operación sobre base de datos local y caché relacional en memoria. Permitió validar en campo la exactitud del dictado por voz, la efectividad del Hero Orb, la supresión de ruido de turbinas y la inyección sin errores en las pestañas de Preregistro, Dirección y Facturación de Smile.</li>
-  <li><strong>Fase 2 (En Desarrollo - Conexión de Gateway Institucional):</strong> Despliegue de un microservicio 'DentAI Clinical Gateway' dentro de la red privada virtual (VPN) de la UPCH. Este servicio expondrá endpoints REST seguros protegidos por tokens JWT firmados con las credenciales universitarias de cada docente y alumno.</li>
-  <li><strong>Fase 3 (Integración con Base de Datos de Smile / HIS Central):</strong> Conexión directa mediante vistas de base de datos o adaptadores HL7 FHIR a las tablas maestras de Smile (Oracle / PostgreSQL). Al dictar 'buscar paciente [DNI]' o 'mostrar pacientes registrados', la extensión consultará en tiempo real el padrón oficial de admisiones del día, precargando la historia clínica activa.</li>
-  <li><strong>Fase 4 (Interconexión con la API PIDE / RENIEC):</strong> Integración con el convenio marco de la universidad con la Plataforma de Interoperabilidad del Estado (PIDE) para la consulta automatizada del DNI. Esto garantiza que cualquier paciente nuevo que ingrese a la clínica tenga sus datos de filiación validados oficialmente contra el padrón nacional, blindando la historia clínica contra rechazos en auditorías de SUSALUD o aseguradoras.</li>
-  <li><strong>Fase 5 (Auditoría Médica y Cero Vulnerabilidad):</strong> Implementación de firmas electrónicas de sesión y trazabilidad inmutable. Cada campo inyectado por DentAI queda asociado al ID del operador autenticado, cumpliendo a cabalidad con la Ley N° 29733 de Protección de Datos Personales.</li>
+  <li><strong>Fase 1 (Validación Funcional en Box):</strong> Operación con data sintética desidentificada y caché en memoria RAM. Permitió verificar tiempos de respuesta (&lt;15 ms), filtrado de ruido de turbina (75 dB) y precisión del Hero Orb.</li>
+  <li><strong>Fase 2 (Despliegue del Backend Gateway Institucional):</strong> DTI habilita un contenedor privado (Node.js/FastAPI) en el centro de datos o servidor de la universidad. Este Gateway es el ÚNICO punto que almacena la clave API máster de Gemini y las credenciales de la Base de Datos Central.</li>
+  <li><strong>Fase 3 (Conexión Segura a la Base de Datos de la Clínica):</strong> El Gateway institucional se conecta mediante conexión segura interna (TCP seguro / pool de conexiones) a la base de datos oficial de la universidad (Oracle / PostgreSQL de Smile). Al dictar 'buscar paciente [DNI]' o 'mostrar pacientes registrados', la extensión consulta el Gateway y este retorna el JSON estructurado del paciente en milisegundos.</li>
+  <li><strong>Fase 4 (Despliegue Masivo en Boxes sin Configuración):</strong> En lugar de configurar cada box manualmente, la extensión se distribuye como un paquete institucional administrado: los alumnos y docentes no necesitan ingresar claves API ni contraseñas de base de datos. La extensión se autentica automáticamente por la IP de la red del box o por la sesión activa de Smile.</li>
+  <li><strong>Fase 5 (Distribución Privada - Sin Salir a Público):</strong> La extensión no se publica en la tienda general de Google Chrome. Se mantiene en Modo Desarrollador Institucional cargado por red local de la facultad, o se registra como extensión privada en la consola de Google Workspace de la UPCH accesible únicamente para cuentas corporativas @upch.pe.</li>
 </ul>
 
 <div class="page-break"></div>
 <h2>4. Ciberseguridad, Protección de Datos Sensibles de Salud y Blindaje Informático para DTI UPCH</h2>
-<p>Ante la evaluación de la Dirección de Tecnologías de la Información (DTI) de la UPCH, el presente capítulo fundamenta rigurosamente cómo DentAI protege la confidencialidad, integridad y disponibilidad de los datos clínicos de los pacientes, dando cumplimiento irrestricto a la Ley N° 29733 (Ley de Protección de Datos Personales del Perú), el D.S. 003-2013-JUS y la Norma Técnica de Salud NTS N° 022-MINSA para historias clínicas.</p>
+<p>Ante la evaluación de la Dirección de Tecnologías de la Información (DTI) de la UPCH, el presente capítulo fundamenta rigurosamente cómo DentAI protege la confidencialidad de los pacientes y resuelve la seguridad de despliegue en múltiples boxes clínicos, dando cumplimiento a la Ley N° 29733 (Ley de Protección de Datos Personales del Perú) y directivas de MINSA.</p>
 
 <div class="callout" style="border-left-color: #10b981; background-color: #ecfdf5;">
-  <span class="callout-title">PRINCIPIO ARQUITECTÓNICO FUNDAMENTAL:</span>
-  DentAI opera bajo una política de CERO PERSISTENCIA LOCAL (RAM-Only Zero Persistence). La extensión NUNCA almacena DNI, nombres ni antecedentes clínicos en el disco duro, ni en localStorage, cookies o IndexedDB de la computadora del box. Los datos procesados se destruyen inmediatamente tras la confirmación e inyección en Smile.
+  <span class="callout-title">PRINCIPIO DE BLINDAJE CLIENTE-SERVIDOR:</span>
+  DentAI adopta el principio de 'Thin Client' (Cliente Ligero): los boxes dentales NO almacenan claves API de IA ni credenciales de base de datos. Toda la lógica de conexión a la BD central y la clave máster de Gemini residen de forma segura en el Backend institucional de la UPCH, garantizando CERO PERSISTENCIA LOCAL en las computadoras de la clínica.
 </div>
 
 <h3>4.1 Ciclo de Vida y Almacenamiento de Datos: ¿Dónde se Aloja el DNI al Dictar?</h3>
-<p>Cuando el cirujano dentista o estudiante dicta la información del paciente en el box (ej. <em>'DNI 72736289, paciente Alexander Manosalva, calle Honorio Delgado 430'</em>), los datos siguen un flujo estrictamente delimitado en memoria volátil:</p>
+<p>Cuando el cirujano dentista o estudiante dicta la información del paciente en el box (ej. <em>'DNI 72736289, paciente Alexander Manosalva, calle Honorio Delgado 430'</em>):</p>
 <ul>
-  <li><strong>1. Captura de Audio:</strong> El micrófono convierte la onda acústica en un buffer binario PCM en memoria del navegador a través de la Web Audio API. El archivo de audio NUNCA se graba en ningún archivo ni disco local.</li>
-  <li><strong>2. Transcripción ASR:</strong> La Web Speech API convierte las muestras a texto dentro del contexto aislado de JavaScript de la extensión (SidePanel).</li>
-  <li><strong>3. Inferencia LLM Cifrada:</strong> El texto se transmite hacia Google Gemini 1.5 Flash mediante una llamada HTTPS cifrada de extremo a extremo bajo TLS 1.3. Bajo las cláusulas de privacidad corporativa de Google Cloud Vertex AI / Enterprise API, los datos de los usuarios NO son utilizados para entrenar modelos, NO son almacenados en repositorios públicos y se purgan del pipeline tras retornar el JSON estructurado.</li>
-  <li><strong>4. Guardias Simbólicas en RAM:</strong> El JSON se valida en la memoria volátil del Side Panel (validación de 8 dígitos de DNI, corrección fonética, aislamiento de factura).</li>
-  <li><strong>5. Inyección en Smile y Purga Automática:</strong> Tras recibir el comando vocal 'confirmar', los datos se transfieren al DOM de la página activa de Smile. Inmediatamente, la variable de estado 'pendingProposal' se sobreescribe con valor nulo (null), liberando los punteros para el recolector de basura (Garbage Collector) de V8. No queda ningún rastro forense en el navegador.</li>
+  <li><strong>1. Captura de Audio:</strong> El micrófono convierte la onda acústica en un buffer PCM efímero en la memoria RAM del navegador. El audio NUNCA se graba en ningún archivo ni disco local.</li>
+  <li><strong>2. Transcripción ASR:</strong> La Web Speech API convierte las muestras a texto dentro de la memoria volátil de la extensión (SidePanel).</li>
+  <li><strong>3. Consulta Centralizada al Backend:</strong> La extensión despacha el texto mediante llamada HTTPS cifrada (TLS 1.3) hacia el Backend Gateway de la UPCH. Dicho servidor contiene la clave API máster y consulta la Base de Datos Central institucional.</li>
+  <li><strong>4. Inyección en Smile y Purga de Memoria:</strong> Tras recibir la confirmación por voz ('confirmar'), los campos de Smile se llenan y la memoria RAM de la extensión se vacía inmediatamente (Garbage Collection de JavaScript). Ningún DNI ni historial se guarda en localStorage, cookies o IndexedDB de la máquina del box.</li>
 </ul>
 
-<h3>4.2 Análisis de Amenazas y Blindaje contra Ciberataques (Modelo STRIDE)</h3>
+<h3>4.2 Resolución Técnica del Despliegue en Boxes y Gestión de Claves API</h3>
+<p>Un problema crítico en clínicas con decenas de boxes es la gestión de claves API y la distribución del software. DentAI lo resuelve mediante tres directrices de arquitectura:</p>
 <ul>
-  <li><strong>Vector A: Ataque por Acceso Físico o Robo de Ficheros Locales (Data at Rest):</strong>
-    <br><em>Escenario de Riesgo:</em> Un usuario no autorizado o atacante accede a la computadora del box e intenta extraer la base de datos de pacientes del navegador.
-    <br><em>Blindaje DentAI:</em> <strong>INMUNIDAD POR CERO PERSISTENCIA.</strong> Como los datos dictados nunca se escriben en el almacenamiento local (localStorage, WebSQL, SQLite o cookies), un atacante que examine el disco o los archivos de perfil de Chrome no encontrará ningún registro clínico de los pacientes atendidos.
+  <li><strong>1. Cero Claves API en los Boxes (Zero-Config Client):</strong> Si cada alumno tuviese que ingresar una clave API, existiría riesgo de copiado, costos descontrolados o interrupción de servicio. Al residir la clave en el Gateway institucional, los boxes clínicos tienen 'Zero-Config': el alumno o docente abre Smile, activa DentAI y el sistema opera de inmediato sin solicitar claves técnicas.</li>
+  <li><strong>2. ¿Modo Desarrollador o Chrome Web Store Pública?</strong> Para proteger la propiedad intelectual de la universidad y evitar que la herramienta sea descargada por terceros fuera de la UPCH, existen dos modalidades aprobadas por DTI:
+    <br>• <em>Modalidad A (Modo Desarrollador Institucional):</em> La extensión se carga en modo descomprimido desde una carpeta compartida en la red interna de la clínica (ej. <code>\\servidor-clinica\DentAI</code>). No pasa por la tienda de Google ni sale a internet.
+    <br>• <em>Modalidad B (Extensión Privada en Google Workspace UPCH):</em> Se publica en la Chrome Web Store bajo visibilidad 'Privada para la Organización Universidad Peruana Cayetano Heredia'. Solo las cuentas institucionales (@upch.pe) pueden instalarla y se actualiza de forma automática en todos los boxes vía políticas corporativas de DTI.
   </li>
-  <li><strong>Vector B: Interceptación de Tráfico en Red (Man-in-the-Middle / Sniffing):</strong>
-    <br><em>Escenario de Riesgo:</em> Un atacante conectado a la red local (LAN o Wi-Fi) del campus intenta capturar los paquetes de red para escuchar los DNIs o nombres dictados.
-    <br><em>Blindaje DentAI:</em> <strong>BLINDAJE CRIPTOGRÁFICO TLS 1.3.</strong> Toda la comunicación externa (hacia la API de IA y hacia el futuro Gateway de la clínica) viaja encapsulada bajo TLS 1.3 con certificados X.509 de 2048/4096 bits. La intercepción en texto claro es computacionalmente inviable.
-  </li>
-  <li><strong>Vector C: Inyección de Código Malicioso Web (Cross-Site Scripting - XSS):</strong>
-    <br><em>Escenario de Riesgo:</em> Un script malicioso embebido en otra pestaña del navegador o en un banner intenta leer la información del paciente en DentAI.
-    <br><em>Blindaje DentAI:</em> <strong>SANDBOXING MANIFEST V3 & ISOLATED WORLDS.</strong> Las extensiones Manifest V3 operan bajo una Content Security Policy (CSP) ultrarrobusta: script-src 'self' (bloquea eval(), funciones remotas e inyecciones inline). Adicionalmente, el Content Script corre en un 'Mundo Aislado' (Isolated World): comparte el árbol DOM pero su contexto de ejecución y variables de memoria son completamente invisibles para los scripts de la página.
-  </li>
-  <li><strong>Vector D: Alucinación Médica o Sobreescritura Accidental:</strong>
-    <br><em>Escenario de Riesgo:</em> Un error del modelo de lenguaje altera el número de historia, confunde la dirección o guarda datos erróneos de forma autónoma.
-    <br><em>Blindaje DentAI:</em> <strong>SUITE DE GUARDIAS DETERMINISTAS & HUMAN-IN-THE-LOOP.</strong> El LLM nunca escribe directamente en Smile; el Motor Simbólico valida tipos con expresiones regulares y restringe el ámbito (impidiendo que datos de facturación alteren el domicilio). Además, DentAI NUNCA pulsa 'Guardar' ni 'Eliminar' de forma desatendida: requiere siempre la confirmación consciente del odontólogo colegiado.
-  </li>
-</ul>
-
-<h3>4.3 Estrategia de Datos: Fase Actual (Data Sintética) vs. Fase Futura (Gateway DTI UPCH)</h3>
-<p>Es prioritario aclarar al equipo de ingenieros de DTI la distinción entre las dos fases del proyecto:</p>
-<ul>
-  <li><strong>Fase Actual (Piloto y Calibración Algorítmica):</strong> Opera con un set de datos sintéticos y desidentificados precargados en memoria. Esta decisión garantiza que durante las pruebas en los boxes no exista ningún riesgo de alterar registros clínicos reales ni depender de aperturas prematuras de puertos en la red de la universidad.</li>
-  <li><strong>Fase Futura (Producción Institucional Regulada por DTI):</strong> La extensión NO se conectará de forma directa o desprotegida a la base de datos de Smile (lo que expondría cadenas de conexión SQL). En su lugar, DTI desplegará el 'DentAI Clinical Gateway' como microservicio contenerizado en la Intranet institucional. El acceso requerirá autenticación federada con Active Directory (credenciales UPCH del docente/alumno), tokens JWT efímeros y certificados mTLS. Mediante la API PIDE/RENIEC, el DNI dictado poblará los datos oficiales del Estado, garantizando una historia clínica inmutable y blindada contra auditorías de SUSALUD.</li>
 </ul>
 
 </body>
