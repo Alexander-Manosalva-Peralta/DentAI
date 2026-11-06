@@ -18,6 +18,7 @@ yarn-debug.log*
 yarn-error.log*
 *.tmp
 *.bak
+*.backup.js
 
 # Credenciales y variables locales de desarrollo
 .env
