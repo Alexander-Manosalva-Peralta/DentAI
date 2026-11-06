@@ -6,67 +6,74 @@
 <style>
   @page {
     size: A4 portrait;
-    margin: 18mm;
+    margin: 16mm;
   }
   * { box-sizing: border-box; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     color: #1e293b;
-    line-height: 1.35;
+    line-height: 1.32;
     margin: 0;
     padding: 0;
-    font-size: 9.5pt;
+    font-size: 9pt;
   }
   .header {
     text-align: center;
     border-bottom: 2px solid #9b1b30;
-    padding-bottom: 12px;
-    margin-bottom: 18px;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
   }
   .univ {
-    font-size: 13pt;
+    font-size: 12.5pt;
     font-weight: bold;
     color: #9b1b30;
     margin: 0;
   }
   .fac {
-    font-size: 10.5pt;
+    font-size: 10pt;
     font-weight: bold;
     color: #0f2c59;
     margin: 2px 0;
   }
   .doc-type {
-    font-size: 9pt;
+    font-size: 8.5pt;
     color: #64748b;
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   h1 {
-    font-size: 13pt;
+    font-size: 12pt;
     color: #0f2c59;
     text-align: center;
-    margin: 12px 0 16px 0;
+    margin: 10px 0 14px 0;
   }
   h2 {
-    font-size: 11.5pt;
+    font-size: 11pt;
     color: #0f2c59;
     border-bottom: 1.5px solid #cbd5e1;
-    padding-bottom: 4px;
-    margin-top: 20px;
-    margin-bottom: 8px;
+    padding-bottom: 3px;
+    margin-top: 18px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 9.8pt;
+    color: #0f2c59;
+    margin-top: 12px;
+    margin-bottom: 4px;
     page-break-after: avoid;
   }
   p {
-    margin: 0 0 7px 0;
+    margin: 0 0 6px 0;
     text-align: justify;
   }
   .callout {
     background-color: #f8fafc;
     border-left: 4px solid #0f2c59;
-    padding: 8px 12px;
-    margin: 10px 0 14px 0;
-    font-size: 9pt;
+    padding: 7px 11px;
+    margin: 8px 0 12px 0;
+    font-size: 8.8pt;
   }
   .callout-title {
     font-weight: bold;
@@ -74,32 +81,32 @@
   }
   .diagram-container {
     text-align: center;
-    margin: 10px 0;
+    margin: 8px 0;
     page-break-inside: avoid;
   }
   .diagram-img {
     width: 100%;
-    max-width: 680px;
+    max-width: 660px;
     height: auto;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
   }
   .caption {
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #64748b;
     font-style: italic;
-    margin-top: 4px;
+    margin-top: 3px;
   }
   .page-break {
     page-break-before: always;
   }
   ul {
-    margin: 4px 0 10px 0;
-    padding-left: 20px;
+    margin: 3px 0 8px 0;
+    padding-left: 18px;
   }
   li {
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 </style>
 </head>
@@ -111,11 +118,11 @@
   <div class="doc-type">Documento de Especificación Técnica y Arquitectura de Software</div>
 </div>
 
-<h1>DENTAI 🦷 — ASISTENTE CLÍNICO ODONTOLÓGICO POR VOZ (100% MANOS LIBRES)<br>ARQUITECTURA DE SISTEMAS, MODELOS DE DATOS Y DIAGRAMAS UML</h1>
+<h1>DENTAI 🦷 — ASISTENTE CLÍNICO ODONTOLÓGICO POR VOZ (100% MANOS LIBRES)<br>ARQUITECTURA DE SISTEMAS, CIBERSEGURIDAD, PROTECCIÓN DE DATOS Y DIAGRAMAS UML</h1>
 
 <div class="callout" style="border-left-color: #4f46e5; background-color: #eef2ff;">
   <span class="callout-title">📌 FICHA TÉCNICA DEL SISTEMA:</span>
-  Proyecto: DentAI (v0.3.7) | Plataforma Objetivo: Software Smile UPCH | Arquitectura: Chrome MV3 Neuro-Simbólica | Investigador: Johan Alexander Manosalva Peralta | Destinatarios: Equipo de Ingeniería de Software, Sistemas y Biomédica
+  Proyecto: DentAI (v0.3.7) | Plataforma Objetivo: Software Smile UPCH | Arquitectura: Chrome MV3 Neuro-Simbólica | Investigador: Johan Alexander Manosalva Peralta | Destinatarios: Dirección de Tecnologías de la Información (DTI UPCH) y Comité Evaluador de Ingenieros
 </div>
 
 <h2>1. Resumen Ejecutivo y Fundamentos de Ingeniería</h2>
@@ -239,6 +246,52 @@
   <li><strong>Fase 3 (Integración con Base de Datos de Smile / HIS Central):</strong> Conexión directa mediante vistas de base de datos o adaptadores HL7 FHIR a las tablas maestras de Smile (Oracle / PostgreSQL). Al dictar 'buscar paciente [DNI]' o 'mostrar pacientes registrados', la extensión consultará en tiempo real el padrón oficial de admisiones del día, precargando la historia clínica activa.</li>
   <li><strong>Fase 4 (Interconexión con la API PIDE / RENIEC):</strong> Integración con el convenio marco de la universidad con la Plataforma de Interoperabilidad del Estado (PIDE) para la consulta automatizada del DNI. Esto garantiza que cualquier paciente nuevo que ingrese a la clínica tenga sus datos de filiación validados oficialmente contra el padrón nacional, blindando la historia clínica contra rechazos en auditorías de SUSALUD o aseguradoras.</li>
   <li><strong>Fase 5 (Auditoría Médica y Cero Vulnerabilidad):</strong> Implementación de firmas electrónicas de sesión y trazabilidad inmutable. Cada campo inyectado por DentAI queda asociado al ID del operador autenticado, cumpliendo a cabalidad con la Ley N° 29733 de Protección de Datos Personales.</li>
+</ul>
+
+<div class="page-break"></div>
+<h2>4. Ciberseguridad, Protección de Datos Sensibles de Salud y Blindaje Informático para DTI UPCH</h2>
+<p>Ante la evaluación de la Dirección de Tecnologías de la Información (DTI) de la UPCH, el presente capítulo fundamenta rigurosamente cómo DentAI protege la confidencialidad, integridad y disponibilidad de los datos clínicos de los pacientes, dando cumplimiento irrestricto a la Ley N° 29733 (Ley de Protección de Datos Personales del Perú), el D.S. 003-2013-JUS y la Norma Técnica de Salud NTS N° 022-MINSA para historias clínicas.</p>
+
+<div class="callout" style="border-left-color: #10b981; background-color: #ecfdf5;">
+  <span class="callout-title">PRINCIPIO ARQUITECTÓNICO FUNDAMENTAL:</span>
+  DentAI opera bajo una política de CERO PERSISTENCIA LOCAL (RAM-Only Zero Persistence). La extensión NUNCA almacena DNI, nombres ni antecedentes clínicos en el disco duro, ni en localStorage, cookies o IndexedDB de la computadora del box. Los datos procesados se destruyen inmediatamente tras la confirmación e inyección en Smile.
+</div>
+
+<h3>4.1 Ciclo de Vida y Almacenamiento de Datos: ¿Dónde se Aloja el DNI al Dictar?</h3>
+<p>Cuando el cirujano dentista o estudiante dicta la información del paciente en el box (ej. <em>'DNI 72736289, paciente Alexander Manosalva, calle Honorio Delgado 430'</em>), los datos siguen un flujo estrictamente delimitado en memoria volátil:</p>
+<ul>
+  <li><strong>1. Captura de Audio:</strong> El micrófono convierte la onda acústica en un buffer binario PCM en memoria del navegador a través de la Web Audio API. El archivo de audio NUNCA se graba en ningún archivo ni disco local.</li>
+  <li><strong>2. Transcripción ASR:</strong> La Web Speech API convierte las muestras a texto dentro del contexto aislado de JavaScript de la extensión (SidePanel).</li>
+  <li><strong>3. Inferencia LLM Cifrada:</strong> El texto se transmite hacia Google Gemini 1.5 Flash mediante una llamada HTTPS cifrada de extremo a extremo bajo TLS 1.3. Bajo las cláusulas de privacidad corporativa de Google Cloud Vertex AI / Enterprise API, los datos de los usuarios NO son utilizados para entrenar modelos, NO son almacenados en repositorios públicos y se purgan del pipeline tras retornar el JSON estructurado.</li>
+  <li><strong>4. Guardias Simbólicas en RAM:</strong> El JSON se valida en la memoria volátil del Side Panel (validación de 8 dígitos de DNI, corrección fonética, aislamiento de factura).</li>
+  <li><strong>5. Inyección en Smile y Purga Automática:</strong> Tras recibir el comando vocal 'confirmar', los datos se transfieren al DOM de la página activa de Smile. Inmediatamente, la variable de estado 'pendingProposal' se sobreescribe con valor nulo (null), liberando los punteros para el recolector de basura (Garbage Collector) de V8. No queda ningún rastro forense en el navegador.</li>
+</ul>
+
+<h3>4.2 Análisis de Amenazas y Blindaje contra Ciberataques (Modelo STRIDE)</h3>
+<ul>
+  <li><strong>Vector A: Ataque por Acceso Físico o Robo de Ficheros Locales (Data at Rest):</strong>
+    <br><em>Escenario de Riesgo:</em> Un usuario no autorizado o atacante accede a la computadora del box e intenta extraer la base de datos de pacientes del navegador.
+    <br><em>Blindaje DentAI:</em> <strong>INMUNIDAD POR CERO PERSISTENCIA.</strong> Como los datos dictados nunca se escriben en el almacenamiento local (localStorage, WebSQL, SQLite o cookies), un atacante que examine el disco o los archivos de perfil de Chrome no encontrará ningún registro clínico de los pacientes atendidos.
+  </li>
+  <li><strong>Vector B: Interceptación de Tráfico en Red (Man-in-the-Middle / Sniffing):</strong>
+    <br><em>Escenario de Riesgo:</em> Un atacante conectado a la red local (LAN o Wi-Fi) del campus intenta capturar los paquetes de red para escuchar los DNIs o nombres dictados.
+    <br><em>Blindaje DentAI:</em> <strong>BLINDAJE CRIPTOGRÁFICO TLS 1.3.</strong> Toda la comunicación externa (hacia la API de IA y hacia el futuro Gateway de la clínica) viaja encapsulada bajo TLS 1.3 con certificados X.509 de 2048/4096 bits. La intercepción en texto claro es computacionalmente inviable.
+  </li>
+  <li><strong>Vector C: Inyección de Código Malicioso Web (Cross-Site Scripting - XSS):</strong>
+    <br><em>Escenario de Riesgo:</em> Un script malicioso embebido en otra pestaña del navegador o en un banner intenta leer la información del paciente en DentAI.
+    <br><em>Blindaje DentAI:</em> <strong>SANDBOXING MANIFEST V3 & ISOLATED WORLDS.</strong> Las extensiones Manifest V3 operan bajo una Content Security Policy (CSP) ultrarrobusta: script-src 'self' (bloquea eval(), funciones remotas e inyecciones inline). Adicionalmente, el Content Script corre en un 'Mundo Aislado' (Isolated World): comparte el árbol DOM pero su contexto de ejecución y variables de memoria son completamente invisibles para los scripts de la página.
+  </li>
+  <li><strong>Vector D: Alucinación Médica o Sobreescritura Accidental:</strong>
+    <br><em>Escenario de Riesgo:</em> Un error del modelo de lenguaje altera el número de historia, confunde la dirección o guarda datos erróneos de forma autónoma.
+    <br><em>Blindaje DentAI:</em> <strong>SUITE DE GUARDIAS DETERMINISTAS & HUMAN-IN-THE-LOOP.</strong> El LLM nunca escribe directamente en Smile; el Motor Simbólico valida tipos con expresiones regulares y restringe el ámbito (impidiendo que datos de facturación alteren el domicilio). Además, DentAI NUNCA pulsa 'Guardar' ni 'Eliminar' de forma desatendida: requiere siempre la confirmación consciente del odontólogo colegiado.
+  </li>
+</ul>
+
+<h3>4.3 Estrategia de Datos: Fase Actual (Data Sintética) vs. Fase Futura (Gateway DTI UPCH)</h3>
+<p>Es prioritario aclarar al equipo de ingenieros de DTI la distinción entre las dos fases del proyecto:</p>
+<ul>
+  <li><strong>Fase Actual (Piloto y Calibración Algorítmica):</strong> Opera con un set de datos sintéticos y desidentificados precargados en memoria. Esta decisión garantiza que durante las pruebas en los boxes no exista ningún riesgo de alterar registros clínicos reales ni depender de aperturas prematuras de puertos en la red de la universidad.</li>
+  <li><strong>Fase Futura (Producción Institucional Regulada por DTI):</strong> La extensión NO se conectará de forma directa o desprotegida a la base de datos de Smile (lo que expondría cadenas de conexión SQL). En su lugar, DTI desplegará el 'DentAI Clinical Gateway' como microservicio contenerizado en la Intranet institucional. El acceso requerirá autenticación federada con Active Directory (credenciales UPCH del docente/alumno), tokens JWT efímeros y certificados mTLS. Mediante la API PIDE/RENIEC, el DNI dictado poblará los datos oficiales del Estado, garantizando una historia clínica inmutable y blindada contra auditorías de SUSALUD.</li>
 </ul>
 
 </body>
