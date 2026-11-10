@@ -42,15 +42,16 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "abre fila 1", "abrir primer paciente" -> "comando": "abrir_paciente", "criterio_seleccion": { "tipo": "fila", "valor": 1 }
    - Apertura de Servicios y Rotaciones Clínicas UPCH (Módulo Servicio):
      * REGLAS FONÉTICAS PERUANAS / ODONTOLOGÍA UPCH:
-       - "UPS H", "UP S H", "UPSH", "UP SH", "u p c h" -> UPCH (Universidad Peruana Cayetano Heredia)
+       - "UPS H", "UP S H", "UPSH", "UP SH", "uph1", "uph", "u p c h" -> UPCH (Universidad Peruana Cayetano Heredia)
        - "DASE", "darse", "da se", "dace", "de hace una", "de hace uno", "dehace", "de ase", "da C3", "da c 3", "da c1", "da c 1" -> DACE
-       - "dayna", "daina", "deina", "da ena", "daena" -> DAENA
+       - "de arena", "d arena", "dearena", "darena", "dayna", "daina", "deina", "da ena", "daena" -> DAENA
        - "clip SMP", "clic SMP", "cli SMP", "clismp" -> CLISMP (Clínica San Martín de Porres)
        - "simulación", "simul", "simulador" -> SIMUL (Simulación clínica)
      * "abre maqueta UPS H1", "abre integral de hace una maqueta UPS H1", "abre maqueta UPCH 1", "abre integral de hace uno", "integral de hace uno", "de hace uno", "abre Integral DASE 1", "dace 1 maqueta 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 1"
      * "abre Integral DASE 1 maqueta 2", "abre maqueta UPCH 2", "dace 1 maqueta 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 2"
      * "abre integral da C3", "integral da C3", "da C3", "abre Integral DASE 3", "abre DASE 3 CLISMP", "abre clip SMP", "integral dace 3" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 3 CLISMP"
-     * "abre Integral DAENA 1 maqueta", "abre DAENA maqueta UPCH 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 - MAQUETA UPCH 1"
+     * "abre integral de arena 1 maqueta uph1", "abre integral de arena 1 maqueta", "abre Integral DAENA 1 maqueta", "abre DAENA maqueta UPCH 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 - MAQUETA UPCH 1"
+     * "abre integral de arena 1", "integral de arena 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 CLISMP"
      * "abre Integral DAENA 1", "abre DAENA 1 CLISMP", "abre dayna 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 CLISMP"
      * "abre Integral DAENA 2", "abre DAENA 2 CLISMP", "abre dayna 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 2 CLISMP"
      * "abre Integral DAENA 4", "abre DAENA 4 CLISMP", "abre dayna 4" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 4 CLISMP"

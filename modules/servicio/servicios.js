@@ -134,12 +134,15 @@ function normalizeServicioFonetic(text) {
        .replace(/\bcuatro\b/gi, "4");
 
   // 2. Reconciliación de UPCH fonético:
-  // Casos reales detectados al dictar: "UPS H", "UPS H1", "UP S H", "UPSH", "UP SH", "U P C H"
-  s = s.replace(/\b(?:ups\s*h|up\s*s\s*h|upsh|up\s*sh|u\s*p\s*c\s*h|u\s*p\s*s\s*h)(\d*)\b/gi, (match, p1) => {
+  // Casos reales detectados al dictar: "UPS H", "UPS H1", "UP S H", "UPSH", "UP SH", "uph1", "uph", "U P C H"
+  s = s.replace(/\b(?:u\s*p\s*c\s*h|ups\s*h|up\s*s\s*h|upsh|up\s*sh|u\s*p\s*s\s*h|u\s*p\s*h|uph)(\d*)\b/gi, (match, p1) => {
     return p1 ? "upch " + p1 : "upch";
   });
 
-  // 3. Reconciliación de DACE fonético:
+  // 3. Reconciliación de DAENA (de arena, d arena, dearena, darena, dayna, daina, deina, da ena, dae na, etc.)
+  s = s.replace(/\b(?:de\s*arena|d\s*arena|dearena|darena|de\s*aena|da\s*ena|dae\s*na|da\s+en\s+a|dayna|daina|deina|dayena|deyna|dayan|dayana)\b/gi, "daena");
+
+  // 4. Reconciliación de DACE fonético:
   // Casos reales detectados por Web Speech API al dictar en español peruano:
   // - "de hace una", "de hace uno", "de hace tres", "de hace 1", "de hace 3"
   // - "da C3", "da c 3", "da c1", "da c 1", "da c2", "da c 2"
@@ -150,9 +153,6 @@ function normalizeServicioFonetic(text) {
   s = s.replace(/\b(?:de\s*hace|de\s*ase|dehace|dease|d\s*hace|d\s*ace)\b/gi, "dace");
   s = s.replace(/\b(?:da\s*se|da\s*ce|da\s*c|dase|darse|daze|dahe|dasi)\b/gi, "dace");
   s = s.replace(/\bintegral\s+hace\s+(\d+)\b/gi, "integral dace $1");
-
-  // 4. Reconciliación de DAENA (dayna, daina, deina, da ena, dae na, dayena, deyna -> daena)
-  s = s.replace(/\b(?:dayna|daina|deina|da\s*ena|dae\s*na|da\s+en\s+a|dayena|deyna|dayan|dayana)\b/gi, "daena");
 
   // 5. Reconciliación de CLISMP (clip smp, clic smp, clis smp, cli smp, clism, clismepe -> clismp)
   s = s.replace(/\b(?:clip\s*smp|clic\s*smp|clis\s*smp|cli\s*smp|clism\b|clismepe|clip\s*ese\s*eme\s*pe)\b/gi, "clismp");
