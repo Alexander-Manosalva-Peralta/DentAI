@@ -250,6 +250,62 @@ async function scrollToSection(secName) {
   return false;
 }
 
+/* ---------- Selección y Apertura de Pacientes en la Tabla de Smile (cuadrito azul / Modificar) ---------- */
+async function selectPatientInSmile(criterion, action = "select") {
+  const t = await activeTab();
+  const tabId = (t && t.id) || (state.tab && state.tab.id);
+  if (!tabId) {
+    setStatus("Abre Smile en la pestaña principal.");
+    return false;
+  }
+
+  const critDesc = (criterion && criterion.value) ? `${criterion.type || ""} ${criterion.value}`.trim() : String(criterion);
+  setStatus(action === "modificar" ? `Buscando y abriendo paciente ${critDesc}…` : `Seleccionando paciente ${critDesc} en la tabla…`);
+
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tabId, allFrames: true },
+      func: dentaiSelectPatientRow,
+      args: [criterion, action],
+    });
+
+    let hit = null;
+    if (res && Array.isArray(res)) {
+      for (const r of res) {
+        if (r.result && r.result.ok) {
+          hit = r.result;
+          break;
+        }
+      }
+    }
+
+    if (hit) {
+      const p = hit.matched || {};
+      state.currentPatient = p;
+
+      if (action === "modificar" || action === "abrir") {
+        const shortNom = p.nombre ? p.nombre.split(" ").slice(0, 2).join(" ") : (p.codigo || "paciente");
+        speak(`${shortNom} abierto.`);
+        setStatus(`Abriendo paciente: ${p.nombre || "—"} (Código: ${p.codigo || "—"}, DNI: ${p.dni || "—"}).`);
+      } else {
+        const shortNom = p.nombre ? p.nombre.split(" ").slice(0, 2).join(" ") : (p.codigo || "paciente");
+        speak(`${shortNom} seleccionado.`);
+        setStatus(`Paciente seleccionado: ${p.nombre || "—"} (Código: ${p.codigo || "—"}, DNI: ${p.dni || "—"}). Di "modificar" para editar.`);
+      }
+      return true;
+    } else {
+      const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || `Paciente "${critDesc}" no encontrado en la tabla.`;
+      speak("No encontrado.");
+      setStatus(motivo);
+      return false;
+    }
+  } catch (err) {
+    console.error("selectPatientInSmile error:", err);
+    setStatus("Error al interactuar con tabla de Smile: " + err.message);
+    return false;
+  }
+}
+
 /* ---------- CONSULTA DE PACIENTE (BASE DE DATOS CLÍNICA / SUPABASE / RENIEC) ---------- */
 async function buscarPaciente(dni, s) {
   if (!dni || dni.length !== 8) return null;
@@ -652,6 +708,30 @@ async function processText(rawText) {
   if (/^(modo llenar|modo campos)$/i.test(normRaw)) {
     setMode("fill");
     speak("Llenar.");
+    return;
+  }
+
+  // ACCIÓN DE APERTURA DIRECTA / MODIFICACIÓN DE PACIENTE EN TABLA DE SMILE
+  // Ej: "abre código 62", "modificar código 62", "abre DNI 10203040", "abre paciente Sánchez"
+  const openCmd = typeof extractAperturaPaciente === "function" ? extractAperturaPaciente(text) : null;
+  if (openCmd) {
+    const ok = await selectPatientInSmile(openCmd.criterion, "modificar");
+    if (ok) return;
+  }
+
+  // ACCIÓN DE SELECCIÓN DE PACIENTE EN TABLA DE SMILE (Marcar cuadrito azul)
+  // Ej: "selecciona código 62", "selecciona DNI 10203040", "selecciona paciente Sánchez", "selecciona fila 1"
+  const selCmd = typeof extractSeleccionPaciente === "function" ? extractSeleccionPaciente(text) : null;
+  if (selCmd) {
+    const ok = await selectPatientInSmile(selCmd.criterion, "select");
+    if (ok) return;
+  }
+
+  // ACCIÓN DIRECTA BOTÓN MODIFICAR EN SMILE
+  // Ej: "modificar", "ve a modificar", "dale a modificar", "clic en modificar"
+  if ((typeof extractComandoModificar === "function" && extractComandoModificar(text)) ||
+      /^(?:(?:ve\s+a|ir\s+a|dale\s+(?:a\s+)?|dar\s+|haz\s+|presiona|presionar|toca|clic(?:k)?\s+(?:en\s+)?)\s*)?(?:modificar|editar)$/i.test(normRaw)) {
+    await navigateToTab("modificar");
     return;
   }
 
@@ -1377,6 +1457,14 @@ async function processText(rawText) {
       if (aiResult.comando === "subir") {
         await scrollPage("up");
         return;
+      }
+      if (aiResult.comando === "abrir_paciente" && aiResult.criterio_seleccion) {
+        const ok = await selectPatientInSmile(aiResult.criterio_seleccion, "modificar");
+        if (ok) return;
+      }
+      if (aiResult.comando === "seleccionar_paciente" && aiResult.criterio_seleccion) {
+        const ok = await selectPatientInSmile(aiResult.criterio_seleccion, "select");
+        if (ok) return;
       }
 
       let dniFetched = false;

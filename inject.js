@@ -651,10 +651,27 @@ function dentaiNavigate(target) {
   }
 
   if (/modificar|editar/i.test(targetClean)) {
-    const btnMod = Array.from(document.querySelectorAll("button, .btn")).find((b) => visible(b) && /modificar/i.test(norm(b.textContent || b.value)));
+    const btnMod = document.getElementById("btn_modificar") ||
+      document.getElementById("btn_editar") ||
+      document.getElementById("modificar") ||
+      document.querySelector("button[name='modificar'], input[name='modificar'], [name*='modificar']") ||
+      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a.btn, a")).find((b) => visible(b) && /^\s*modificar\s*$/i.test(norm(b.textContent || b.value))) ||
+      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a")).find((b) => visible(b) && /modificar|editar/i.test(norm(b.textContent || b.value)));
+
     if (btnMod) {
       btnMod.scrollIntoView({ block: "center", behavior: "smooth" });
+      const prevOutline = btnMod.style.outline;
+      btnMod.style.outline = "3px solid #0071e3";
+      setTimeout(() => { btnMod.style.outline = prevOutline; }, 2000);
+      try {
+        if (btnMod.getAttribute("onclick")) {
+          new Function(btnMod.getAttribute("onclick")).call(btnMod);
+        }
+      } catch (e) {}
       btnMod.click();
+      if (typeof window.$ === "function" || typeof window.jQuery === "function") {
+        try { (window.$ || window.jQuery)(btnMod).trigger("click"); } catch (e) {}
+      }
       return { ok: true, matched: "Modificar", navigated: true, score: 100 };
     }
   }
@@ -975,4 +992,278 @@ function dentaiScrollToSection(sectionName) {
   }
 
   return false;
+}
+
+/* ========================================================
+   SELECCIÓN Y APERTURA DE PACIENTES EN TABLA DE PREREGISTRO
+   Permite seleccionar por Código, DNI, Nombre o Fila ("cuadrito azul"),
+   y opcionalmente abrir directamente en modo Modificar.
+   ======================================================== */
+function dentaiSelectPatientRow(criterion, action) {
+  try {
+    const norm = (s) => String(s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const visible = (el) => {
+      try {
+        const r = el.getBoundingClientRect();
+        const st = window.getComputedStyle(el);
+        return (r.width > 0 || r.height > 0) && st.visibility !== "hidden" && st.display !== "none";
+      } catch (e) {
+        return false;
+      }
+    };
+
+    // 1. Normalizar criterio de búsqueda
+    let searchType = "query";
+    let searchValue = "";
+
+    if (criterion && typeof criterion === "object") {
+      searchType = criterion.type || "query";
+      searchValue = norm(criterion.value);
+    } else {
+      searchValue = norm(criterion);
+    }
+
+    if (!searchValue) {
+      return { ok: false, motivo: "Criterio de búsqueda vacío." };
+    }
+
+    // 2. Localizar tablas en la página de Smile
+    const tables = Array.from(document.querySelectorAll("table, .table, [role='grid']"));
+    if (!tables.length) {
+      return { ok: false, motivo: "No se encontró ninguna tabla de pacientes en pantalla." };
+    }
+
+    let targetRow = null;
+    let targetPatient = null;
+    let targetIndex = -1;
+
+    // Detectar si busca por fila numérica (ej: fila 1, fila 2, primer paciente)
+    const isRowIndex = searchType === "fila" || searchType === "index" || /\bfila\s*\d+\b/i.test(searchValue) || /^(?:primer|segund|tercer)/i.test(searchValue);
+    let requestedRowIdx = -1;
+    if (isRowIndex) {
+      const matchIdx = searchValue.match(/(\d+)/);
+      if (matchIdx) requestedRowIdx = parseInt(matchIdx[1], 10);
+      else if (/primer/i.test(searchValue)) requestedRowIdx = 1;
+      else if (/segund/i.test(searchValue)) requestedRowIdx = 2;
+      else if (/tercer/i.test(searchValue)) requestedRowIdx = 3;
+    }
+
+    for (const table of tables) {
+      if (!visible(table)) continue;
+
+      // Mapear encabezados de columna
+      const headers = Array.from(table.querySelectorAll("thead th, thead td, tr:first-child th"));
+      let colCod = -1, colNom = -1, colDni = -1, colCel = -1, colFec = -1;
+      headers.forEach((h, idx) => {
+        const ht = norm(h.textContent);
+        if (/cod|codigo/i.test(ht)) colCod = idx;
+        else if (/nombre|paciente/i.test(ht)) colNom = idx;
+        else if (/dni|doc/i.test(ht)) colDni = idx;
+        else if (/celular|movil|tel/i.test(ht)) colCel = idx;
+        else if (/fecha|nacimiento/i.test(ht)) colFec = idx;
+      });
+
+      // Obtener filas de datos (ignorar encabezados)
+      let rows = Array.from(table.querySelectorAll("tbody tr"));
+      if (!rows.length) {
+        rows = Array.from(table.querySelectorAll("tr"));
+      }
+      rows = rows.filter((r) => !r.closest("thead") && r.querySelectorAll("td").length >= 2);
+
+      let dataRowCounter = 0;
+      for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+        const row = rows[rIdx];
+        if (!visible(row)) continue;
+        const cells = Array.from(row.querySelectorAll("td, th"));
+        if (cells.length < 2) continue;
+
+        dataRowCounter++;
+
+        const cellTexts = cells.map((c) => (c.textContent || "").trim());
+        const rowNorm = norm(cellTexts.join(" "));
+
+        const codText = colCod >= 0 && cells[colCod] ? cells[colCod].textContent.trim() : (cells[1] ? cells[1].textContent.trim() : "");
+        const nomText = colNom >= 0 && cells[colNom] ? cells[colNom].textContent.trim() : (cells[2] ? cells[2].textContent.trim() : "");
+        const dniText = colDni >= 0 && cells[colDni] ? cells[colDni].textContent.trim() : (cellTexts.find((t) => /^\d{8}$/.test(t.replace(/\D/g, ""))) || "");
+        const celText = colCel >= 0 && cells[colCel] ? cells[colCel].textContent.trim() : "";
+        const fecText = colFec >= 0 && cells[colFec] ? cells[colFec].textContent.trim() : "";
+
+        const cleanCod = norm(codText);
+        const cleanNom = norm(nomText);
+        const cleanDni = dniText.replace(/\D/g, "");
+
+        let isMatch = false;
+
+        // Comprobación de coincidencia según el criterio
+        if (isRowIndex && requestedRowIdx > 0) {
+          if (dataRowCounter === requestedRowIdx) isMatch = true;
+        } else if (searchType === "codigo" || /^\d{1,6}$/.test(searchValue)) {
+          if (cleanCod === searchValue) {
+            isMatch = true;
+          } else {
+            const re = new RegExp(`\\b${searchValue}\\b`);
+            if (re.test(cleanCod) || re.test(rowNorm)) {
+              isMatch = true;
+            }
+          }
+        } else if (searchType === "dni" || /^\d{8}$/.test(searchValue)) {
+          if (cleanDni === searchValue || rowNorm.includes(searchValue)) {
+            isMatch = true;
+          }
+        } else if (searchType === "nombre" || /[a-z]/i.test(searchValue)) {
+          const words = searchValue.split(/\s+/).filter((w) => w.length >= 2);
+          if (words.length > 0) {
+            const allInNom = words.every((w) => cleanNom.includes(w) || rowNorm.includes(w));
+            if (allInNom) isMatch = true;
+          }
+        } else {
+          if (rowNorm.includes(searchValue)) isMatch = true;
+        }
+
+        if (isMatch) {
+          targetRow = row;
+          targetIndex = dataRowCounter;
+          targetPatient = {
+            codigo: codText,
+            nombre: nomText,
+            dni: cleanDni,
+            celular: celText,
+            fechaNac: fecText,
+            rowIndex: dataRowCounter
+          };
+          break;
+        }
+      }
+
+      if (targetRow) break;
+    }
+
+    if (!targetRow) {
+      return { ok: false, motivo: `No se encontró al paciente con criterio "${searchValue}" en la tabla.` };
+    }
+
+    // 3. Scroll suave hasta la fila encontrada
+    targetRow.scrollIntoView({ block: "center", behavior: "smooth" });
+
+    // 4. Resaltado visual en Smile (outline azul + pulso de fondo)
+    const oldOutline = targetRow.style.outline;
+    const oldBg = targetRow.style.backgroundColor;
+    targetRow.style.outline = "3px solid #0071e3";
+    targetRow.style.backgroundColor = "rgba(0, 113, 227, 0.18)";
+    setTimeout(() => {
+      targetRow.style.outline = oldOutline;
+      targetRow.style.backgroundColor = oldBg;
+    }, 3500);
+
+    // 5. SELECCIÓN DE LA FILA (Activar el cuadrito azul)
+    const cells = Array.from(targetRow.querySelectorAll("td, th"));
+    const firstCell = cells[0];
+
+    // A. Checkbox o radio en la fila o primera celda
+    const inputSelector = targetRow.querySelector("input[type='checkbox'], input[type='radio']") || (firstCell && firstCell.querySelector("input"));
+    if (inputSelector) {
+      inputSelector.checked = true;
+      inputSelector.click();
+      try {
+        inputSelector.dispatchEvent(new Event("change", { bubbles: true }));
+        inputSelector.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch (e) {}
+    }
+
+    // B. Elementos interactivos en la primera celda (cuadrito azul estilizado en Smile)
+    if (firstCell) {
+      const clickables = Array.from(firstCell.querySelectorAll("a, button, [role='checkbox'], [role='radio'], span, div, i"));
+      clickables.forEach((c) => {
+        try { c.click(); } catch (e) {}
+      });
+      firstCell.click();
+      try { firstCell.dispatchEvent(new Event("click", { bubbles: true })); } catch (e) {}
+    }
+
+    // C. Clic en la fila completa (tr)
+    targetRow.click();
+    try { targetRow.dispatchEvent(new Event("click", { bubbles: true })); } catch (e) {}
+
+    // D. Soporte para jQuery en Smile
+    if (typeof window.jQuery === "function" || typeof window.$ === "function") {
+      const jq = window.jQuery || window.$;
+      try {
+        jq(targetRow).trigger("click");
+        if (firstCell) jq(firstCell).trigger("click");
+        if (inputSelector) jq(inputSelector).prop("checked", true).trigger("change").trigger("click");
+      } catch (e) {}
+    }
+
+    // 6. Si se solicitó la acción "modificar" o "abrir", presionar directamente el botón Modificar
+    if (action === "modificar" || action === "abrir") {
+      setTimeout(() => {
+        const btnMod = document.getElementById("btn_modificar") ||
+          document.getElementById("btn_editar") ||
+          document.getElementById("modificar") ||
+          document.querySelector("button[name='modificar'], input[name='modificar'], [name*='modificar']") ||
+          Array.from(document.querySelectorAll("button, .btn, input[type='button'], a.btn, a")).find((b) => {
+            const t = norm(b.textContent || b.value || "");
+            return /^\s*modificar\s*$/i.test(t);
+          }) ||
+          Array.from(document.querySelectorAll("button, .btn, a")).find((b) => {
+            const t = norm(b.textContent || b.value || "");
+            return /modificar|editar/i.test(t);
+          });
+
+        if (btnMod) {
+          btnMod.scrollIntoView({ block: "center", behavior: "smooth" });
+          const prevOut = btnMod.style.outline;
+          btnMod.style.outline = "3px solid #0071e3";
+          setTimeout(() => { btnMod.style.outline = prevOut; }, 2000);
+          try {
+            if (btnMod.getAttribute("onclick")) {
+              new Function(btnMod.getAttribute("onclick")).call(btnMod);
+            }
+          } catch (e) {}
+          btnMod.click();
+          if (typeof window.jQuery === "function" || typeof window.$ === "function") {
+            try { (window.jQuery || window.$)(btnMod).trigger("click"); } catch (e) {}
+          }
+        }
+      }, 250);
+    }
+
+    return {
+      ok: true,
+      matched: targetPatient,
+      action: action || "select"
+    };
+  } catch (err) {
+    return { ok: false, motivo: err.message };
+  }
+}
+
+// Lista los pacientes visibles actualmente en la tabla de Smile
+function dentaiListPatientsTable() {
+  const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+  const tables = Array.from(document.querySelectorAll("table, .table"));
+  const patients = [];
+
+  for (const table of tables) {
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    for (const row of rows) {
+      const cells = Array.from(row.querySelectorAll("td"));
+      if (cells.length >= 3) {
+        patients.push({
+          codigo: norm(cells[1]?.textContent),
+          nombre: norm(cells[2]?.textContent),
+          dni: cells.map((c) => norm(c.textContent)).find((t) => /^\d{8}$/.test(t.replace(/\D/g, ""))) || ""
+        });
+      }
+    }
+  }
+
+  return patients;
 }
