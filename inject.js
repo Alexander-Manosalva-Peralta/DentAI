@@ -1324,8 +1324,44 @@ function dentaiSelectServicio(target) {
     let matchedEl = null;
     let bestScore = 0;
 
+    const isTargetDaena = /\bdaena\b/i.test(targetClean);
+    const isTargetDace = /\bdace\b/i.test(targetClean);
+    const targetHas1 = /\b1\b/.test(targetClean);
+    const targetHas2 = /\b2\b/.test(targetClean);
+    const targetHas3 = /\b3\b/.test(targetClean);
+    const targetHas4 = /\b4\b/.test(targetClean);
+    const targetHasMaqueta1 = /\bmaqueta\b/i.test(targetClean) && targetHas1;
+    const targetHasMaqueta2 = /\bmaqueta\b/i.test(targetClean) && targetHas2;
+    const targetHasSimul = /\bsimul\b/i.test(targetClean);
+    const targetHasClismp = /\bclismp\b/i.test(targetClean);
+
     for (const el of candidates) {
       const elText = fonetic(el.textContent);
+
+      // AISLAMIENTO ESTRICTO DACE vs DAENA:
+      const isElDaena = /\bdaena\b/i.test(elText);
+      const isElDace = /\bdace\b/i.test(elText);
+      if (isTargetDaena && !isElDaena) continue;
+      if (isTargetDace && !isElDace) continue;
+
+      // AISLAMIENTO ESTRICTO DE NÚMEROS:
+      const elHas1 = /\b1\b/.test(elText);
+      const elHas2 = /\b2\b/.test(elText);
+      const elHas3 = /\b3\b/.test(elText);
+      const elHas4 = /\b4\b/.test(elText);
+      if (targetHas1 && !elHas1) continue;
+      if (targetHas2 && !elHas2) continue;
+      if (targetHas3 && !elHas3) continue;
+      if (targetHas4 && !elHas4) continue;
+
+      // AISLAMIENTO ESTRICTO DE SUBTIPOS:
+      const elHasMaqueta = /\bmaqueta\b/i.test(elText);
+      const elHasSimul = /\bsimul\b/i.test(elText);
+      const elHasClismp = /\bclismp\b/i.test(elText);
+      if (targetHasMaqueta1 && (!elHasMaqueta || !elHas1)) continue;
+      if (targetHasMaqueta2 && (!elHasMaqueta || !elHas2)) continue;
+      if (targetHasSimul && !elHasSimul) continue;
+      if (targetHasClismp && !elHasClismp) continue;
 
       // Coincidencia exacta
       if (elText === targetClean) {

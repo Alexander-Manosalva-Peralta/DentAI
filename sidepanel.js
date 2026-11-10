@@ -337,28 +337,6 @@ async function openServicioInSmile(serviceTarget) {
       }
     }
 
-    // Si el servicio no está en la pantalla actual (ej: estamos dentro de otra rotación o pestaña),
-    // navegamos automáticamente a la pestaña Servicio de Smile y reintentamos la selección
-    if (!hit) {
-      console.log(`Servicio "${officialName}" no encontrado en pantalla actual. Navegando al módulo Servicio de Smile...`);
-      setStatus("Cargando lista de Servicios en Smile…");
-      await navigateToTab("servicio", true);
-      await new Promise((r) => setTimeout(r, 650));
-      const res2 = await chrome.scripting.executeScript({
-        target: { tabId: tabId, allFrames: true },
-        func: dentaiSelectServicio,
-        args: [{ target: officialName, serviceId: srvObj ? srvObj.id : null }],
-      });
-      if (res2 && Array.isArray(res2)) {
-        for (const r of res2) {
-          if (r.result && r.result.ok) {
-            hit = r.result;
-            break;
-          }
-        }
-      }
-    }
-
     if (hit) {
       speak("Abierto.");
       setStatus(`Servicio abierto: ${officialName}.`);
