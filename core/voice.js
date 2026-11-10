@@ -33,6 +33,9 @@ function initWebSpeech() {
     }
 
     if (interim) {
+      // Ignorar resultados provisionales si el asistente está hablando para evitar eco
+      if (state.isSpeakingTTS) return;
+
       if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setHearing(true, 0.9);
       const cleanInterim = interim.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       if (!cleanInterim.startsWith("abriendo") && !(state.isSpeakingTTS && cleanInterim === state.speakingText)) {
@@ -55,6 +58,13 @@ function initWebSpeech() {
     }
 
     if (final) {
+      // ANTI-ECO TOTAL:
+      // 1. Si el asistente está hablando activamente por los altavoces, ignorar cualquier audio captado por el micrófono
+      if (state.isSpeakingTTS) {
+        console.log("Anti-echo: Audio captado mientras el asistente habla -> descartado:", final.trim());
+        return;
+      }
+
       if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setHearing(true, 0.75);
       const mBar = $("meterBar");
       if (mBar) mBar.style.width = "25%";
@@ -67,23 +77,15 @@ function initWebSpeech() {
         return;
       }
 
-      // ANTI-ECO TOTAL:
-      // Si el texto final coincide con lo que el asistente acaba de decir por TTS o es un eco residual de navegación
+      // 2. Si el texto final coincide con lo que el asistente acaba de decir por TTS o es un eco residual de navegación
       const timeSinceSpeech = Date.now() - (state.lastSpeechTime || 0);
-      if (timeSinceSpeech < 2500 && state.speakingText) {
-        if (cleanFinal === state.speakingText ||
-            cleanFinal.includes(state.speakingText) ||
-            state.speakingText.includes(cleanFinal) ||
-            cleanFinal.startsWith("abriendo")) {
-          console.log("Anti-echo: Descartado eco de TTS ->", final);
+      if (timeSinceSpeech < 1500) {
+        if (/^(?:abierto|seleccionado|listo|anotado|llenado|borrado|abriendo|guardando|formulario limpio|error)\.?$/i.test(cleanFinal) ||
+            cleanFinal === state.speakingText ||
+            (state.speakingText && (cleanFinal.includes(state.speakingText) || state.speakingText.includes(cleanFinal)))) {
+          console.log("Anti-echo: Descartado eco residual de TTS ->", final.trim());
           return;
         }
-      }
-
-      // Si el asistente está hablando y el texto es estrictamente una de las palabras que dice el asistente, ignorar
-      if (state.isSpeakingTTS && /^(?:listo|anotado|llenado|borrado|abriendo|error)\.?$/i.test(final.trim())) {
-        console.log("Anti-echo: Descartado eco de TTS ->", final.trim());
-        return;
       }
 
       if (typeof handleText === "function") {

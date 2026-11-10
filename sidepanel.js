@@ -284,12 +284,10 @@ async function selectPatientInSmile(criterion, action = "select") {
       state.currentPatient = p;
 
       if (action === "modificar" || action === "abrir") {
-        const shortNom = p.nombre ? p.nombre.split(" ").slice(0, 2).join(" ") : (p.codigo || "paciente");
-        speak(`${shortNom} abierto.`);
+        speak("Abierto.");
         setStatus(`Abriendo paciente: ${p.nombre || "—"} (Código: ${p.codigo || "—"}, DNI: ${p.dni || "—"}).`);
       } else {
-        const shortNom = p.nombre ? p.nombre.split(" ").slice(0, 2).join(" ") : (p.codigo || "paciente");
-        speak(`${shortNom} seleccionado.`);
+        speak("Seleccionado.");
         setStatus(`Paciente seleccionado: ${p.nombre || "—"} (Código: ${p.codigo || "—"}, DNI: ${p.dni || "—"}). Di "modificar" para editar.`);
       }
       return true;
@@ -338,7 +336,7 @@ async function openServicioInSmile(serviceTarget) {
     }
 
     if (hit) {
-      speak(`${officialName} abierto.`);
+      speak("Abierto.");
       setStatus(`Servicio abierto: ${officialName}.`);
       return true;
     } else {

@@ -19,24 +19,26 @@ function speak(text) {
 
       u.onstart = () => {
         state.isSpeakingTTS = true;
+        state.lastSpeechTime = Date.now();
         if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setSpeaking(true);
       };
 
       const finishSpeech = () => {
+        state.lastSpeechTime = Date.now();
         if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setSpeaking(false);
         setTimeout(() => {
           state.isSpeakingTTS = false;
-        }, 500);
+        }, 600);
       };
 
       u.onend = finishSpeech;
       u.onerror = finishSpeech;
 
-      // Respaldo de seguridad para que nunca se quede trabado
+      // Respaldo de seguridad para que nunca se quede trabado si onend falla
       setTimeout(() => {
         state.isSpeakingTTS = false;
         if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setSpeaking(false);
-      }, 2000);
+      }, 5000);
 
       window.speechSynthesis.speak(u);
     } catch (e) {
