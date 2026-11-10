@@ -40,6 +40,20 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "abre DNI 10203040", "modificar DNI 10203040" -> "comando": "abrir_paciente", "criterio_seleccion": { "tipo": "dni", "valor": "10203040" }
      * "abre paciente Sanchez", "modificar paciente Sanchez" -> "comando": "abrir_paciente", "criterio_seleccion": { "tipo": "nombre", "valor": "Sanchez" }
      * "abre fila 1", "abrir primer paciente" -> "comando": "abrir_paciente", "criterio_seleccion": { "tipo": "fila", "valor": 1 }
+   - Apertura de Servicios y Rotaciones Clínicas UPCH (Módulo Servicio):
+     * REGLAS FONÉTICAS PERUANAS / ODONTOLOGÍA UPCH:
+       - "DASE", "darse", "da se", "dace" -> DACE
+       - "dayna", "daina", "deina", "da ena", "daena" -> DAENA
+       - "clip SMP", "clic SMP", "cli SMP", "clismp" -> CLISMP (Clínica San Martín de Porres)
+       - "simulación", "simul", "simulador" -> SIMUL (Simulación clínica)
+     * "abre Integral DASE 1", "abre Integral DACE 1", "abre maqueta UPCH 1", "dace 1 maqueta 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 1"
+     * "abre Integral DASE 1 maqueta 2", "abre maqueta UPCH 2", "dace 1 maqueta 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 2"
+     * "abre Integral DASE 3", "abre DASE 3 CLISMP", "abre clip SMP", "integral dace 3" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 3 CLISMP"
+     * "abre Integral DAENA 1 maqueta", "abre DAENA maqueta UPCH 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 - MAQUETA UPCH 1"
+     * "abre Integral DAENA 1", "abre DAENA 1 CLISMP", "abre dayna 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 CLISMP"
+     * "abre Integral DAENA 2", "abre DAENA 2 CLISMP", "abre dayna 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 2 CLISMP"
+     * "abre Integral DAENA 4", "abre DAENA 4 CLISMP", "abre dayna 4" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 4 CLISMP"
+     * "abre DAENA 4 SIMUL", "abre DAENA 4 simulación", "abre simulador daena 4" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 4 SIMUL"
 
 3. EXTRACCIÓN DE DATOS PARA FORMULARIO DE SMILE:
    - Pantalla de Búsqueda / Preregistro:
@@ -74,7 +88,8 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
 RESPONDE EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO:
 {
   "es_charla_irrelevante": boolean,
-  "comando": "confirmar" | "descartar" | "navegar" | "bajar" | "subir" | "seccion" | "seleccionar_paciente" | "abrir_paciente" | null,
+  "comando": "confirmar" | "descartar" | "navegar" | "bajar" | "subir" | "seccion" | "seleccionar_paciente" | "abrir_paciente" | "abrir_servicio" | null,
+  "servicio_target": string | null,
   "destino_navegacion": string | null,
   "destino_seccion": string | null,
   "criterio_seleccion": { "tipo": "codigo" | "dni" | "nombre" | "fila", "valor": string | number } | null,

@@ -1267,3 +1267,139 @@ function dentaiListPatientsTable() {
 
   return patients;
 }
+
+// Selecciona y abre una clínica/rotación en el Módulo Servicio de Smile
+function dentaiSelectServicio(target) {
+  try {
+    const rawTarget = (typeof target === "object" && target !== null)
+      ? (target.target || target.nombreOficial || target.serviceId || "")
+      : (target || "");
+
+    if (!rawTarget) {
+      return { ok: false, motivo: "No se especificó el servicio clínico a seleccionar" };
+    }
+
+    const clean = (s) => (s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Normalización fonética rápida
+    const fonetic = (s) => clean(s)
+      .replace(/\b(?:dase|daze|darse|dahe|dasi)\b/g, "dace")
+      .replace(/\b(?:dayna|daina|deina|da\s+ena|dae\s+na)\b/g, "daena")
+      .replace(/\b(?:clip\s*smp|clic\s*smp|cli\s*smp|clism\b|clismepe)\b/g, "clismp")
+      .replace(/\b(?:simulaci[oó]n|simulador|simulaciones)\b/g, "simul")
+      .replace(/\buno\b/g, "1")
+      .replace(/\bdos\b/g, "2")
+      .replace(/\btres\b/g, "3")
+      .replace(/\bcuatro\b/g, "4");
+
+    const targetClean = fonetic(rawTarget);
+    const targetTokens = targetClean.split(" ").filter(Boolean);
+
+    // Buscar elementos en el DOM de Smile
+    const candidates = Array.from(document.querySelectorAll(
+      ".list-group-item, a, button, tr, div[onclick], li, [role='button'], td, div"
+    )).filter((el) => {
+      const text = clean(el.textContent);
+      if (text.length < 5 || text.length > 160) return false;
+      // Comprobar que no contenga contenedores masivos con muchos hijos de bloque
+      if (el.children.length > 6) return false;
+      return /integral|dace|dase|daena|maqueta|clismp|simul/i.test(text);
+    });
+
+    let matchedEl = null;
+    let bestScore = 0;
+
+    for (const el of candidates) {
+      const elText = fonetic(el.textContent);
+
+      // Coincidencia exacta
+      if (elText === targetClean) {
+        matchedEl = el;
+        bestScore = 100;
+        break;
+      }
+
+      // Inclusión completa
+      if (elText.includes(targetClean)) {
+        if (85 > bestScore) {
+          bestScore = 85;
+          matchedEl = el;
+        }
+      } else if (targetClean.includes(elText)) {
+        if (75 > bestScore) {
+          bestScore = 75;
+          matchedEl = el;
+        }
+      }
+
+      // Coincidencia token a token ponderada
+      let matchCount = 0;
+      for (const tok of targetTokens) {
+        if (elText.includes(tok)) matchCount++;
+      }
+      const score = (matchCount / Math.max(targetTokens.length, 1)) * 70;
+      if (score > bestScore && score >= 45) {
+        bestScore = score;
+        matchedEl = el;
+      }
+    }
+
+    if (!matchedEl) {
+      return { ok: false, motivo: `No se encontró en pantalla el servicio: ${rawTarget}` };
+    }
+
+    // Ubicar el elemento clickeable más apropiado
+    const clickable = matchedEl.closest("a, button, tr, .list-group-item, [role='button']") || matchedEl;
+
+    // Scroll suave
+    clickable.scrollIntoView({ block: "center", behavior: "smooth" });
+
+    // Resaltado visual en Smile
+    const oldOutline = clickable.style.outline;
+    const oldBg = clickable.style.backgroundColor;
+    clickable.style.outline = "3px solid #0071e3";
+    clickable.style.backgroundColor = "rgba(0, 113, 227, 0.22)";
+    setTimeout(() => {
+      clickable.style.outline = oldOutline;
+      clickable.style.backgroundColor = oldBg;
+    }, 3500);
+
+    // Clic en el elemento o enlace interno
+    const innerLink = clickable.querySelector("a, button");
+    if (innerLink && innerLink !== clickable) {
+      try { innerLink.click(); } catch (e) {}
+    }
+
+    try {
+      if (clickable.getAttribute("onclick")) {
+        new Function(clickable.getAttribute("onclick")).call(clickable);
+      }
+    } catch (e) {}
+
+    clickable.click();
+    try {
+      const win = typeof window !== "undefined" ? window : null;
+      if (typeof MouseEvent !== "undefined") {
+        clickable.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: win }));
+      }
+    } catch (e) {}
+
+    if (typeof window !== "undefined" && (typeof window.jQuery === "function" || typeof window.$ === "function")) {
+      try { (window.jQuery || window.$)(clickable).trigger("click"); } catch (e) {}
+    }
+
+    return {
+      ok: true,
+      servicio: rawTarget,
+      textoDetectado: (clickable.textContent || "").trim().slice(0, 80)
+    };
+  } catch (err) {
+    return { ok: false, motivo: err.message };
+  }
+}

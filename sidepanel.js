@@ -306,6 +306,54 @@ async function selectPatientInSmile(criterion, action = "select") {
   }
 }
 
+/* ---------- Apertura de Servicios / Clínicas Integrales UPCH (Módulo Servicio) ---------- */
+async function openServicioInSmile(serviceTarget) {
+  const t = await activeTab();
+  const tabId = (t && t.id) || (state.tab && state.tab.id);
+  if (!tabId) {
+    setStatus("Abre Smile en la pestaña principal.");
+    return false;
+  }
+
+  const srvObj = typeof reconcileServicioNombre === "function" ? reconcileServicioNombre(serviceTarget) : null;
+  const officialName = srvObj ? srvObj.nombreOficial : serviceTarget;
+
+  setStatus(`Abriendo servicio clínico: ${officialName}…`);
+
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tabId, allFrames: true },
+      func: dentaiSelectServicio,
+      args: [{ target: officialName, serviceId: srvObj ? srvObj.id : null }],
+    });
+
+    let hit = null;
+    if (res && Array.isArray(res)) {
+      for (const r of res) {
+        if (r.result && r.result.ok) {
+          hit = r.result;
+          break;
+        }
+      }
+    }
+
+    if (hit) {
+      speak(`${officialName} abierto.`);
+      setStatus(`Servicio abierto: ${officialName}.`);
+      return true;
+    } else {
+      const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || `Servicio "${officialName}" no encontrado en pantalla.`;
+      speak("Servicio no encontrado.");
+      setStatus(motivo);
+      return false;
+    }
+  } catch (err) {
+    console.error("openServicioInSmile error:", err);
+    setStatus("Error al interactuar con Servicio en Smile: " + err.message);
+    return false;
+  }
+}
+
 /* ---------- CONSULTA DE PACIENTE (BASE DE DATOS CLÍNICA / SUPABASE / RENIEC) ---------- */
 async function buscarPaciente(dni, s) {
   if (!dni || dni.length !== 8) return null;
@@ -709,6 +757,14 @@ async function processText(rawText) {
     setMode("fill");
     speak("Llenar.");
     return;
+  }
+
+  // ACCIÓN DE APERTURA DE SERVICIOS / CLÍNICAS INTEGRALES UPCH (MÓDULO SERVICIO)
+  // Ej: "abre Integral DASE 1", "abre Integral DASE 3", "abre DAENA 4 SIMUL", "abre maqueta UPCH 1", "abre clip SMP"
+  const srvCmd = typeof extractSeleccionServicio === "function" ? extractSeleccionServicio(text) : null;
+  if (srvCmd) {
+    const ok = await openServicioInSmile(srvCmd.target);
+    if (ok) return;
   }
 
   // ACCIÓN DE APERTURA DIRECTA / MODIFICACIÓN DE PACIENTE EN TABLA DE SMILE
@@ -1464,6 +1520,10 @@ async function processText(rawText) {
       }
       if (aiResult.comando === "seleccionar_paciente" && aiResult.criterio_seleccion) {
         const ok = await selectPatientInSmile(aiResult.criterio_seleccion, "select");
+        if (ok) return;
+      }
+      if (aiResult.comando === "abrir_servicio" && aiResult.servicio_target) {
+        const ok = await openServicioInSmile(aiResult.servicio_target);
         if (ok) return;
       }
 
