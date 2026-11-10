@@ -1288,15 +1288,21 @@ function dentaiSelectServicio(target) {
       .trim();
 
     // Normalización fonética rápida
-    const fonetic = (s) => clean(s)
-      .replace(/\b(?:dase|daze|darse|dahe|dasi)\b/g, "dace")
-      .replace(/\b(?:dayna|daina|deina|da\s+ena|dae\s+na)\b/g, "daena")
-      .replace(/\b(?:clip\s*smp|clic\s*smp|cli\s*smp|clism\b|clismepe)\b/g, "clismp")
-      .replace(/\b(?:simulaci[oó]n|simulador|simulaciones)\b/g, "simul")
-      .replace(/\buno\b/g, "1")
-      .replace(/\bdos\b/g, "2")
-      .replace(/\btres\b/g, "3")
-      .replace(/\bcuatro\b/g, "4");
+    const fonetic = (s) => {
+      let str = clean(s)
+        .replace(/\buno\b/gi, "1")
+        .replace(/\bdos\b/gi, "2")
+        .replace(/\btres\b/gi, "3")
+        .replace(/\bcuatro\b/gi, "4");
+      str = str.replace(/\bda\s*c\s*(\d+)\b/gi, "dace $1");
+      str = str.replace(/\b(?:de\s*hace|de\s*ase|dehace|dease|d\s*hace|d\s*ace)\b/gi, "dace");
+      str = str.replace(/\b(?:da\s*se|da\s*ce|da\s*c|dase|darse|daze|dahe|dasi)\b/gi, "dace");
+      str = str.replace(/\bintegral\s+hace\s+(\d+)\b/gi, "integral dace $1");
+      str = str.replace(/\b(?:dayna|daina|deina|da\s*ena|dae\s*na|da\s+en\s+a|dayena|deyna|dayan|dayana)\b/gi, "daena");
+      str = str.replace(/\b(?:clip\s*smp|clic\s*smp|clis\s*smp|cli\s*smp|clism\b|clismepe|clip\s*ese\s*eme\s*pe)\b/gi, "clismp");
+      str = str.replace(/\b(?:simulaci[oó]n|simulador|simulaciones)\b/gi, "simul");
+      return str;
+    };
 
     const targetClean = fonetic(rawTarget);
     const targetTokens = targetClean.split(" ").filter(Boolean);

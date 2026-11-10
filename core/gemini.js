@@ -42,13 +42,13 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "abre fila 1", "abrir primer paciente" -> "comando": "abrir_paciente", "criterio_seleccion": { "tipo": "fila", "valor": 1 }
    - Apertura de Servicios y Rotaciones Clínicas UPCH (Módulo Servicio):
      * REGLAS FONÉTICAS PERUANAS / ODONTOLOGÍA UPCH:
-       - "DASE", "darse", "da se", "dace" -> DACE
+       - "DASE", "darse", "da se", "dace", "de hace", "dehace", "de ase", "da C3", "da c 3", "da c1", "da c 1" -> DACE
        - "dayna", "daina", "deina", "da ena", "daena" -> DAENA
        - "clip SMP", "clic SMP", "cli SMP", "clismp" -> CLISMP (Clínica San Martín de Porres)
        - "simulación", "simul", "simulador" -> SIMUL (Simulación clínica)
-     * "abre Integral DASE 1", "abre Integral DACE 1", "abre maqueta UPCH 1", "dace 1 maqueta 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 1"
+     * "abre integral de hace uno", "integral de hace uno", "de hace uno", "abre Integral DASE 1", "abre Integral DACE 1", "abre maqueta UPCH 1", "dace 1 maqueta 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 1"
      * "abre Integral DASE 1 maqueta 2", "abre maqueta UPCH 2", "dace 1 maqueta 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 1: MAQUETA UPCH 2"
-     * "abre Integral DASE 3", "abre DASE 3 CLISMP", "abre clip SMP", "integral dace 3" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 3 CLISMP"
+     * "abre integral da C3", "integral da C3", "da C3", "abre Integral DASE 3", "abre DASE 3 CLISMP", "abre clip SMP", "integral dace 3" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DACE 3 CLISMP"
      * "abre Integral DAENA 1 maqueta", "abre DAENA maqueta UPCH 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 - MAQUETA UPCH 1"
      * "abre Integral DAENA 1", "abre DAENA 1 CLISMP", "abre dayna 1" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 1 CLISMP"
      * "abre Integral DAENA 2", "abre DAENA 2 CLISMP", "abre dayna 2" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 2 CLISMP"
