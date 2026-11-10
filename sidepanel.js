@@ -120,7 +120,7 @@ function renderFields() {
 }
 
 /* ---------- Navegación por voz entre pestañas de Smile ---------- */
-async function navigateToTab(targetName) {
+async function navigateToTab(targetName, silentOnFail = false) {
   if (!targetName) return false;
 
   const now = Date.now();
@@ -191,8 +191,10 @@ async function navigateToTab(targetName) {
       }, 1000);
       return true;
     } else {
-      speak("No encontrado.");
-      setStatus(`Pestaña o botón "${targetName}" no encontrado.`);
+      if (!silentOnFail) {
+        speak("No encontrado.");
+        setStatus(`Pestaña o botón "${targetName}" no encontrado.`);
+      }
       return false;
     }
   } catch (e) {
@@ -335,13 +337,35 @@ async function openServicioInSmile(serviceTarget) {
       }
     }
 
+    // Si el servicio no está en la pantalla actual (ej: estamos dentro de otra rotación o pestaña),
+    // navegamos automáticamente a la pestaña Servicio de Smile y reintentamos la selección
+    if (!hit) {
+      console.log(`Servicio "${officialName}" no encontrado en pantalla actual. Navegando al módulo Servicio de Smile...`);
+      setStatus("Cargando lista de Servicios en Smile…");
+      await navigateToTab("servicio", true);
+      await new Promise((r) => setTimeout(r, 650));
+      const res2 = await chrome.scripting.executeScript({
+        target: { tabId: tabId, allFrames: true },
+        func: dentaiSelectServicio,
+        args: [{ target: officialName, serviceId: srvObj ? srvObj.id : null }],
+      });
+      if (res2 && Array.isArray(res2)) {
+        for (const r of res2) {
+          if (r.result && r.result.ok) {
+            hit = r.result;
+            break;
+          }
+        }
+      }
+    }
+
     if (hit) {
       speak("Abierto.");
       setStatus(`Servicio abierto: ${officialName}.`);
       return true;
     } else {
       const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || `Servicio "${officialName}" no encontrado en pantalla.`;
-      speak("Servicio no encontrado.");
+      speak("No encontrado.");
       setStatus(motivo);
       return false;
     }
@@ -816,7 +840,7 @@ async function processText(rawText) {
   if (navMatch) {
     const target = navMatch[1].replace(/[.,;]+$/, "").trim();
     if (target) {
-      const ok = await navigateToTab(target);
+      const ok = await navigateToTab(target, true);
       if (ok) return;
     }
   }

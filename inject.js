@@ -1290,10 +1290,13 @@ function dentaiSelectServicio(target) {
     // Normalización fonética rápida
     const fonetic = (s) => {
       let str = clean(s)
-        .replace(/\buno\b/gi, "1")
+        .replace(/\b(?:uno|una|un)\b/gi, "1")
         .replace(/\bdos\b/gi, "2")
         .replace(/\btres\b/gi, "3")
         .replace(/\bcuatro\b/gi, "4");
+      str = str.replace(/\b(?:ups\s*h|up\s*s\s*h|upsh|up\s*sh|u\s*p\s*c\s*h|u\s*p\s*s\s*h)(\d*)\b/gi, (match, p1) => {
+        return p1 ? "upch " + p1 : "upch";
+      });
       str = str.replace(/\bda\s*c\s*(\d+)\b/gi, "dace $1");
       str = str.replace(/\b(?:de\s*hace|de\s*ase|dehace|dease|d\s*hace|d\s*ace)\b/gi, "dace");
       str = str.replace(/\b(?:da\s*se|da\s*ce|da\s*c|dase|darse|daze|dahe|dasi)\b/gi, "dace");
@@ -1301,7 +1304,7 @@ function dentaiSelectServicio(target) {
       str = str.replace(/\b(?:dayna|daina|deina|da\s*ena|dae\s*na|da\s+en\s+a|dayena|deyna|dayan|dayana)\b/gi, "daena");
       str = str.replace(/\b(?:clip\s*smp|clic\s*smp|clis\s*smp|cli\s*smp|clism\b|clismepe|clip\s*ese\s*eme\s*pe)\b/gi, "clismp");
       str = str.replace(/\b(?:simulaci[oó]n|simulador|simulaciones)\b/gi, "simul");
-      return str;
+      return str.replace(/\s+/g, " ").trim();
     };
 
     const targetClean = fonetic(rawTarget);
