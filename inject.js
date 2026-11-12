@@ -7,7 +7,27 @@ function dentaiScan() {
 
   const visible = (el) => {
     try {
+      // 1. Descartar elementos dentro de pestañas inactivas o contenedores ocultos de Smile
+      if (el.closest(".tab-pane:not(.active), [style*='display: none'], [style*='display:none']")) {
+        return false;
+      }
+
+      const tag = el.tagName.toLowerCase();
       const type = (el.type || "").toLowerCase();
+
+      // 2. Selects (nativos, Select2 o estilizados de Smile)
+      if (tag === "select") {
+        const p = el.closest("td, th, .form-group, .row, tr, div, form");
+        if (p) {
+          const pr = p.getBoundingClientRect();
+          const pst = getComputedStyle(p);
+          if ((pr.width > 0 || pr.height > 0) && pst.visibility !== "hidden" && pst.display !== "none") {
+            return true;
+          }
+        }
+      }
+
+      // 3. Radios y Checkboxes
       if (type === "radio" || type === "checkbox") {
         if (el.parentElement) {
           const pr = el.parentElement.getBoundingClientRect();
@@ -17,17 +37,8 @@ function dentaiScan() {
           }
         }
       }
-      if (el.tagName.toLowerCase() === "select") {
-        if (el.classList.contains("select2-hidden-accessible") || el.getAttribute("data-select2-id")) {
-          const s2Container = el.nextElementSibling?.classList?.contains("select2-container")
-            ? el.nextElementSibling
-            : document.querySelector(`.select2-container[data-select2-id*="${el.id}"]`);
-          if (s2Container) {
-            const r2 = s2Container.getBoundingClientRect();
-            return (r2.width > 0 || r2.height > 0) && getComputedStyle(s2Container).display !== "none";
-          }
-        }
-      }
+
+      // 4. Elementos estándar
       const r = el.getBoundingClientRect();
       const st = getComputedStyle(el);
       return (r.width > 0 || r.height > 0) && st.visibility !== "hidden" && st.display !== "none";
@@ -284,7 +295,10 @@ function dentaiScan() {
         valorActual: type === "checkbox" ? String(el.checked) : type === "richtext" ? textOf(el) : (el.value || "").slice(0, 80),
       };
       if (tag === "select") {
-        entry.opciones = Array.from(el.options).map((o) => clean(o.text)).filter(Boolean).slice(0, 60);
+        entry.opciones = Array.from(el.options)
+          .map((o) => clean(o.text || o.innerText || o.value))
+          .filter((t) => t && !/^::seleccione::$/i.test(t))
+          .slice(0, 40);
       }
       key = "e:" + k;
       el.setAttribute("data-dentai-key", key);
@@ -1553,3 +1567,36 @@ function dentaiOpenRegistroClinico(target) {
     return { ok: false, motivo: err.message };
   }
 }
+
+/* ---------- Detector Automático de Cambios de Vista en Smile (AJAX Observer) ---------- */
+(function initSmileDomObserver() {
+  if (window.__dentaiObserverInitialized) return;
+  window.__dentaiObserverInitialized = true;
+
+  let debounceTimer = null;
+  const observer = new MutationObserver((mutations) => {
+    let hasRelevantChange = false;
+    for (const m of mutations) {
+      if (m.type === "childList" && m.addedNodes.length > 0) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1 && (node.querySelector("input, select, textarea, table, .table") || node.matches("input, select, textarea, table"))) {
+            hasRelevantChange = true;
+            break;
+          }
+        }
+      }
+      if (hasRelevantChange) break;
+    }
+
+    if (hasRelevantChange) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        try {
+          chrome.runtime.sendMessage({ action: "dentai_dom_changed" });
+        } catch (e) {}
+      }, 500);
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+})();

@@ -385,7 +385,10 @@ async function openRegistroClinicoInSmile(targetRecord) {
 
     if (hit) {
       speak("Abierto.");
-      setStatus(`Registro abierto: ${hit.matched || targetRecord}.`);
+      setStatus(`Registro abierto: ${hit.matched || targetRecord}. Cargando formulario…`);
+      // Disparar re-escaneos automáticos para capturar el formulario AJAX recién cargado en Smile
+      setTimeout(async () => { await scan(); }, 600);
+      setTimeout(async () => { await scan(); setStatus(`Formulario listo. Escuchando…`); }, 1500);
       return true;
     } else {
       const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || `Registro clínico "${targetRecord}" no encontrado.`;
@@ -1640,7 +1643,15 @@ async function processText(rawText) {
   // ==========================================
   const detectedLabels = [];
 
-    // Detección de apertura de registros clínicos (ej: "abre examen clínico", "abre 2 examen clínico", "abre anamnesis", "abre registro 26")
+      // Comando de voz para actualizar o refrescar campos del formulario
+  if (/(?:actualiza|actualizar|refresca|refrescar|escanear|escanea)\s+(?:los\s+)?campos/i.test(normRaw)) {
+    setStatus("Actualizando campos del formulario…");
+    await scan();
+    speak("Campos actualizados.");
+    return;
+  }
+
+  // Detección de apertura de registros clínicos (ej: "abre examen clínico", "abre 2 examen clínico", "abre anamnesis", "abre registro 26")
   const regClinCmd = typeof extractOpenRegistroClinico === "function" ? extractOpenRegistroClinico(normRaw) : null;
   if (regClinCmd && regClinCmd.target) {
     const ok = await openRegistroClinicoInSmile(regClinCmd.target);
@@ -1920,6 +1931,87 @@ async function processText(rawText) {
     }
   }
 
+  // --- PASO 21: EXAMEN CLÍNICO (ECTOSCOPIA, FUNCIONES VITALES, PESO Y TALLA) ---
+  if (typeof extractEctoscopia === "function") {
+    const ecto = extractEctoscopia(text);
+    if (ecto.apreciacionGeneral) {
+      const f = findField(null, /apreciaci[oó]n\s+general/i);
+      if (f) { state.pending.set(f.id, { valor: ecto.apreciacionGeneral, label: "Apreciación General" }); detectedLabels.push(`Apreciación General (${ecto.apreciacionGeneral})`); }
+    }
+    if (ecto.estadoNutricional) {
+      const f = findField(null, /nutricional/i);
+      if (f) { state.pending.set(f.id, { valor: ecto.estadoNutricional, label: "Estado Nutricional" }); detectedLabels.push(`Estado Nutricional (${ecto.estadoNutricional})`); }
+    }
+    if (ecto.estadoHidratacion) {
+      const f = findField(null, /hidrataci[oó]n/i);
+      if (f) { state.pending.set(f.id, { valor: ecto.estadoHidratacion, label: "Estado Hidratación" }); detectedLabels.push(`Estado Hidratación (${ecto.estadoHidratacion})`); }
+    }
+    if (ecto.lucidez) {
+      const f = findField(null, /lucidez/i);
+      if (f) { state.pending.set(f.id, { valor: ecto.lucidez, label: "Lucidez y Orientación" }); detectedLabels.push("Lucidez (LOTEP)"); }
+    }
+    if (ecto.colaboracion) {
+      const f = findField(null, /colaboraci[oó]n/i);
+      if (f) { state.pending.set(f.id, { valor: ecto.colaboracion, label: "Grado de Colaboración" }); detectedLabels.push(`Colaboración (${ecto.colaboracion})`); }
+    }
+  }
+
+  if (typeof extractPesoTalla === "function") {
+    const pt = extractPesoTalla(text);
+    if (pt.peso) {
+      const f = findField(null, /peso/i);
+      if (f) { state.pending.set(f.id, { valor: pt.peso, label: "Peso (Kg)" }); detectedLabels.push(`Peso (${pt.peso} kg)`); }
+    }
+    if (pt.talla) {
+      const f = findField(null, /talla/i);
+      if (f) { state.pending.set(f.id, { valor: pt.talla, label: "Talla (M)" }); detectedLabels.push(`Talla (${pt.talla} m)`); }
+    }
+    if (pt.imc) {
+      const f = findField(null, /imc/i);
+      if (f) { state.pending.set(f.id, { valor: pt.imc, label: "IMC" }); detectedLabels.push(`IMC (${pt.imc})`); }
+    }
+  }
+
+  if (typeof extractFuncionesVitales === "function") {
+    const fv = extractFuncionesVitales(text);
+    if (fv.temperatura) {
+      const f = findField(null, /temperatura\s+corporal|corporal/i) || findField(null, /temperatura/i);
+      if (f) { state.pending.set(f.id, { valor: fv.temperatura, label: "Temperatura Corporal" }); detectedLabels.push(`Temp (${fv.temperatura} °C)`); }
+    }
+    if (fv.frecuenciaRespiratoria) {
+      const f = findField(null, /respiratoria|respiraci[oó]n/i);
+      if (f) { state.pending.set(f.id, { valor: fv.frecuenciaRespiratoria, label: "Frecuencia Respiratoria" }); detectedLabels.push(`Frec. Resp (${fv.frecuenciaRespiratoria}/min)`); }
+    }
+    if (fv.pulso) {
+      const f = findField(null, /pulso|card[ií]aca/i);
+      if (f) { state.pending.set(f.id, { valor: fv.pulso, label: "Pulso" }); detectedLabels.push(`Pulso (${fv.pulso}/min)`); }
+    }
+    if (fv.presionArterial) {
+      const f = findField(null, /presi[oó]n\s+arterial|presi[oó]n/i);
+      if (f) { state.pending.set(f.id, { valor: fv.presionArterial, label: "Presión Arterial" }); detectedLabels.push(`PA (${fv.presionArterial})`); }
+    }
+  }
+
+  if (typeof extractEstomatologico === "function") {
+    const estom = extractEstomatologico(text);
+    if (estom.respiracion) {
+      const f = findField(null, /respiraci[oó]n/i);
+      if (f) { state.pending.set(f.id, { valor: estom.respiracion, label: "Respiración" }); detectedLabels.push(`Respiración (${estom.respiracion})`); }
+    }
+    if (estom.simetriaFacial) {
+      const f = findField(null, /simetr[ií]a/i);
+      if (f) { state.pending.set(f.id, { valor: estom.simetriaFacial, label: "Simetría Facial" }); detectedLabels.push(`Simetría (${estom.simetriaFacial})`); }
+    }
+    if (estom.aperturaBucal) {
+      const f = findField(null, /apertura/i);
+      if (f) { state.pending.set(f.id, { valor: estom.aperturaBucal, label: "Apertura Bucal" }); detectedLabels.push(`Apertura (${estom.aperturaBucal})`); }
+    }
+    if (estom.atm) {
+      const f = findField(null, /a\.?t\.?m\.?/i);
+      if (f) { state.pending.set(f.id, { valor: estom.atm, label: "A.T.M." }); detectedLabels.push(`ATM (${estom.atm})`); }
+    }
+  }
+
   // RESPUESTA DE MOTOR LOCAL
   if (detectedLabels.length > 0) {
     renderPending();
@@ -2083,6 +2175,17 @@ function init() {
       };
     }
 
+    const refreshFieldsBtn = $("refreshFieldsBtn");
+    if (refreshFieldsBtn) {
+      refreshFieldsBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setStatus("Actualizando campos del formulario…");
+        await scan();
+        speak("Campos actualizados.");
+      };
+    }
+
     // Control manual del micrófono en el badge pulsante
     const pulseBadge = $("pulseBadge");
     if (pulseBadge) {
@@ -2194,6 +2297,15 @@ function init() {
       chrome.tabs.onUpdated.addListener((id, info) => {
         if (info.status === "complete" && state.tab && id === state.tab.id) {
           checkSite().then((ok) => ok && scan()).catch(console.warn);
+        }
+      });
+    }
+
+    // Escuchar cambios DOM automáticos emitidos por inject.js cuando Smile carga vistas AJAX
+    if (chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((msg) => {
+        if (msg && msg.action === "dentai_dom_changed") {
+          scan().catch(console.warn);
         }
       });
     }

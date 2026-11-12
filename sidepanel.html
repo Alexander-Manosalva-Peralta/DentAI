@@ -212,7 +212,10 @@
 
 <!-- Campos detectados -->
 <details class="apple-details">
-  <summary>Campos detectados en el formulario activo</summary>
+  <summary style="display:flex; justify-content:space-between; align-items:center;">
+    <span>Campos detectados en el formulario activo</span>
+    <button id="refreshFieldsBtn" class="apple-pill-btn" style="padding:2px 8px; font-size:11px; margin-left:auto;" title="Reescanear formulario activo de Smile">🔄 Actualizar</button>
+  </summary>
   <div id="fields" class="fields"></div>
 </details>
 

@@ -9,7 +9,8 @@ async function extractWithGemini(text, s) {
     id: f.id,
     etiqueta: f.etiqueta,
     seccion: f.seccion,
-    tipo: f.tipo
+    tipo: f.tipo,
+    opciones: (f.opciones && f.opciones.length > 0) ? f.opciones.slice(0, 30) : undefined
   }));
 
   const model = s.geminiModel || "gemini-1.5-flash";
@@ -88,6 +89,30 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "número exterior", "número de vivienda", "número exterior de vivienda", "número de casa", "vivienda", "número": si dice "sin número", "S/N" o "SN", asigna "S/N". Si dice número (ej: "430", "555"), asigna ese número EXCLUSIVAMENTE a "*No. Exterior" (NUNCA a Calle ni a Dirección).
      * "referencia", "como referencia" -> asigna a "Referencia:".
      * "distrito", "provincia", "departamento" -> asigna a sus selectores correspondientes.
+   - Examen Clínico y Triaje Estomatológico (Módulo 2 EXAMEN CLÍNICO):
+     * REGLA OBLIGATORIA PARA DESPLEGABLES (select): Si el campo tiene 'opciones', DEBES seleccionar obligatoriamente una de las opciones textuales disponibles en el array 'opciones':
+       - Apreciación General: "ABEG" (Buen Estado General), "AREG" (Regular Estado General), "AMEG" (Mal Estado General).
+       - Apreciación del Estado Nutricional: "ABEN" (Buen Estado Nutricional), "AREN" (Regular Estado Nutricional), "AMEN" (Mal Estado Nutricional).
+       - Apreciación del Estado de Hidratación: "ABEH" (Buen Estado de Hidratación), "AREH" (Regular Estado de Hidratación), "AMEH" (Mal Estado de Hidratación / Deshidratado).
+       - Lucidez y Orientación: "LOTEP" (Lúcido, Orientado en Tiempo, Espacio y Persona) o "Si".
+       - Grado de Colaboración: "COLABORADOR", "POCO COLABORADOR", "NO COLABORADOR".
+       - Facies: "NO CARACTERÍSTICA", "DOLOROSA", etc.
+     * Peso y Talla:
+       - "peso [número]" -> asigna el número en kg (ej: "70", "65.5") al campo "Peso (Kg):".
+       - "talla [número]" -> asigna en metros con punto decimal (ej: "1.70", "1.65") al campo "Talla (M):".
+       - Si se dictan ambos, calcula IMC = Peso / (Talla * Talla) redondeado a 1 decimal y asígnalo al campo "IMC:".
+     * Funciones Vitales:
+       - "temperatura [número]" -> asigna en °C (ej: "36.5", "37") al campo "Temperatura Corporal (°C):".
+       - "frecuencia respiratoria [número]" o "respiración [número]" -> asigna al campo "Frecuencia respiratoria ( / min):".
+       - "pulso [número]" o "frecuencia cardíaca [número]" -> asigna al campo "Pulso ( / min):".
+       - "presión arterial [número sobre número]" (ej: "120/80") -> asigna al campo "Presión arterial (mm Hg):".
+     * Estomatológico Extraoral y Oclusión:
+       - "respiración nasal/bucal/mixta" -> asigna al campo "RESPIRACIÓN".
+       - "simetría facial" -> "SIMÉTRICO" o "ASIMÉTRICO".
+       - "apertura bucal" -> "Aparentemente normal", "Con limitación", "Con desviación".
+       - "ATM" -> "Aparentemente normal", "Con ruidos", "Con dolor".
+       - "mordida abierta/cruzada/en tijera" -> asigna a sus campos correspondientes.
+
    - Facturación (Sección Factura):
      * "factura sí", "requiere factura sí", "selecciona factura sí", "factura no", "sin factura" -> asigna "Si" o "No" al campo "Va a requerir factura?".
      * "los datos son iguales a la dirección sí", "los datos sí son iguales a la dirección", "mismos datos de dirección" -> asigna "Si" o "No" al campo "Los datos son iguales a la dirección".

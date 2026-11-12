@@ -4,7 +4,8 @@
 
 // Diccionario de las 22 secciones del menú lateral izquierdo de Smile
 const EXPEDIENTE_MENU_SECTIONS = [
-  { id: "datos_generales", label: "Datos generales", aliases: ["datos generales", "datos del paciente", "general", "identificacion"] },
+  // NOTA: Eliminamos "general" para evitar colisión con el campo clínico "Apreciación General" de Examen Clínico
+  { id: "datos_generales", label: "Datos generales", aliases: ["datos generales", "ir a datos generales", "ver datos generales", "datos del paciente", "expediente datos generales", "seccion datos generales"] },
   { id: "registros_clinicos", label: "Registros clínicos", aliases: ["registros clinicos", "registros clínicos", "registro clinico", "registro clínico", "historia clinica", "historia clínica"] },
   { id: "odontograma_hallazgos", label: "Odontograma hallazgos", aliases: ["odontograma hallazgos", "hallazgos", "odontograma inicial"] },
   { id: "periodontograma", label: "Periodontograma", aliases: ["periodontograma", "periodonto", "sondaje"] },
@@ -54,6 +55,13 @@ function normExpText(s) {
 function extractExpedienteNav(text) {
   if (!text) return null;
   const clean = normExpText(text);
+
+  // GUARDA CRÍTICA: Si el usuario está dictando términos clínicos de Examen Clínico,
+  // como "Apreciación General", "Estado Nutricional", "ABEG", "AREG", etc.,
+  // NUNCA interpretarlo como navegación a Datos Generales.
+  if (/(?:apreciaci[oó]n|nutrici[oó]n|hidrataci[oó]n|aspectos?\s+generales?|examen\s+general|abeg|areg|ameg|aben|aren|amen|abeh|areh|ameh|lotep|facies|colaborador)/i.test(clean)) {
+    return null;
+  }
 
   // Quitar verbos de navegación iniciales
   const trimmed = clean.replace(/^(?:ve\s+a|ir\s+a|abre|abrir|entra\s+(?:a|en)?|entrar\s+(?:a|en)?|mostrar|ver|pasa\s+a|selecciona)\s+(?:el\s+|la\s+|los\s+|las\s+)?(?:menu\s+|pestaña\s+|seccion\s+)?/i, "").trim();
