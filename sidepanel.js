@@ -358,30 +358,23 @@ async function openServicioInSmile(serviceTarget) {
 async function buscarPaciente(dni, s) {
   if (!dni || dni.length !== 8) return null;
 
-  // 1. Consultar Base de Datos en la Nube (Supabase REST API si está configurada)
-  if (s.dbProvider === "supabase" && s.supabaseUrl && s.supabaseKey) {
+  // 1. Consultar Base de Datos Institucional (Microsoft SQL Server SMILE QA via Bridge)
+  if (s.dbProvider === "smile_qa" || !s.dbProvider) {
     try {
-      setStatus(`Consultando Supabase para DNI ${dni}…`);
-      const baseUrl = s.supabaseUrl.replace(/\/+$/, "");
-      const res = await fetch(`${baseUrl}/rest/v1/pacientes?dni=eq.${dni}&select=*`, {
-        headers: {
-          apikey: s.supabaseKey,
-          Authorization: `Bearer ${s.supabaseKey}`,
-          Accept: "application/json"
-        }
-      });
+      setStatus(`Consultando SQL Server SMILE QA para DNI ${dni}…`);
+      const bridgeUrl = (s.sqlBridgeUrl || "http://localhost:3000/api/pacientes").replace(/\/+$/, "");
+      const res = await fetch(`${bridgeUrl}?dni=${dni}`);
       if (res.ok) {
-        const rows = await res.json();
-        if (rows && rows.length > 0) {
-          const p = rows[0];
+        const p = await res.json();
+        if (p && (p.nombres || p.nombre)) {
           return {
-            origen: "Supabase",
+            origen: p.origen || "SQL Server SMILE QA",
             dni: dni,
             nombres: (p.nombres || p.nombre || "").trim(),
-            apellidoPaterno: (p.apellido_paterno || p.apellidoPaterno || "").trim(),
-            apellidoMaterno: (p.apellido_materno || p.apellidoMaterno || "").trim(),
+            apellidoPaterno: (p.apellidoPaterno || p.apellido_paterno || "").trim(),
+            apellidoMaterno: (p.apellidoMaterno || p.apellido_materno || "").trim(),
             genero: (p.genero || "MASCULINO").toUpperCase(),
-            fechaNacimiento: p.fecha_nacimiento || p.fechaNacimiento || "",
+            fechaNacimiento: p.fechaNacimiento || p.fecha_nacimiento || "",
             celular: p.celular || p.telefono || "",
             email: p.email || p.correo || "",
             direccion: p.direccion || p.calle || "",
@@ -392,7 +385,7 @@ async function buscarPaciente(dni, s) {
         }
       }
     } catch (e) {
-      console.warn("Supabase query error:", e);
+      console.warn("SQL Server QA Bridge query error:", e);
     }
   }
 

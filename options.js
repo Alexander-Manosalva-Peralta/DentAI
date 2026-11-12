@@ -6,8 +6,7 @@ const TEXT_IDS = [
   "operador",
   "vocab",
   "dbProvider",
-  "supabaseUrl",
-  "supabaseKey",
+  "sqlBridgeUrl",
   "customApiUrl",
   "localPatientsDb",
   "dniApiProvider",
@@ -24,10 +23,10 @@ const BOOL_IDS = [
 ];
 
 function updateDbBoxes(provider) {
-  const supa = document.getElementById("supabaseConfigBox");
+  const qa = document.getElementById("smileQaBox");
   const custom = document.getElementById("customApiBox");
   const local = document.getElementById("localDbBox");
-  if (supa) supa.style.display = provider === "supabase" ? "block" : "none";
+  if (qa) qa.style.display = (provider === "smile_qa" || !provider) ? "block" : "none";
   if (custom) custom.style.display = provider === "custom_api" ? "block" : "none";
   if (local) local.style.display = provider === "local" ? "block" : "none";
 }
@@ -64,7 +63,39 @@ function updateDbBoxes(provider) {
   if (nEl) nEl.textContent = ` (${dentai_log.length} registros)`;
 })();
 
-document.getElementById("save").onclick = async () => {
+
+  const testSqlBtn = document.getElementById("testSqlBtn");
+  const testSqlStatus = document.getElementById("testSqlStatus");
+  if (testSqlBtn && testSqlStatus) {
+    testSqlBtn.onclick = async () => {
+      testSqlStatus.textContent = "Verificando puente y SQL Server...";
+      testSqlStatus.style.color = "#2563eb";
+      try {
+        const res = await fetch("http://localhost:3000/api/status", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok) {
+            testSqlStatus.textContent = "Conectado a SQL Server (BD: " + (data.database || "SMILE") + ")";
+            testSqlStatus.style.color = "#16a34a";
+          } else if (data.status === "FIREWALL_BLOCKED") {
+            testSqlStatus.textContent = "Bridge activo. SQL Server bloqueado por Firewall de AWS (IP: " + (data.public_ip || "") + ")";
+            testSqlStatus.style.color = "#d97706";
+          } else {
+            testSqlStatus.textContent = "Error: " + (data.error || "Fallo de conexion");
+            testSqlStatus.style.color = "#dc2626";
+          }
+        } else {
+          testSqlStatus.textContent = "El bridge no responde (HTTP " + res.status + ")";
+          testSqlStatus.style.color = "#dc2626";
+        }
+      } catch (err) {
+        testSqlStatus.textContent = "Bridge local no detectado en localhost:3000. Inicie iniciar_bridge.bat";
+        testSqlStatus.style.color = "#dc2626";
+      }
+    };
+  }
+
+  document.getElementById("save").onclick = async () => {
   const o = {};
   TEXT_IDS.forEach((id) => {
     const el = document.getElementById(id);

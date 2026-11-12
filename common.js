@@ -77,11 +77,11 @@ const DEFAULTS = {
   geminiModel: "gemini-1.5-flash",
   modelLLM: "gpt-4o-mini",
 
-  // Base de Datos Clínica de Pacientes (Triaje / Recepción / Consultorio)
-  dbProvider: "local",              // "local" (Memoria/JSON) | "supabase" | "custom_api"
-  supabaseUrl: "",                  // Ej: https://xyz.supabase.co
-  supabaseKey: "",                  // Clave anon/public de Supabase
-  customApiUrl: "",                 // Ej: http://localhost:3000/api/pacientes
+  // Base de Datos Clínica Institucional SMILE QA (Microsoft SQL Server / Cayetano Heredia)
+  dbProvider: "smile_qa",           // "smile_qa" (SQL Server Bridge) | "local" | "custom_api"
+  sqlBridgeUrl: "http://localhost:3000/api/pacientes",
+  sqlStatusUrl: "http://localhost:3000/api/status",
+  customApiUrl: "http://localhost:3000/api/pacientes",
   localPatientsDb: JSON.stringify(DEFAULT_PATIENTS_DB, null, 2),
 
   // Consulta DNI (DB Pacientes / RENIEC Perú) – Llenado automático de datos clínicos
