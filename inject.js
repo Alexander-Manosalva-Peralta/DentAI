@@ -1231,6 +1231,25 @@ function dentaiSelectPatientRow(criterion, action) {
           if (typeof window.jQuery === "function" || typeof window.$ === "function") {
             try { (window.jQuery || window.$)(btnMod).trigger("click"); } catch (e) {}
           }
+        } else {
+          // En tablas de Servicio / Pacientes de Smile, abrir directamente el expediente haciendo clic en el enlace o doble clic en la fila
+          const link = targetRow.querySelector("a[href*='paciente'], a[href*='expediente'], a[href*='historia'], a") ||
+            (cells[colNom] && cells[colNom].querySelector("a")) ||
+            (cells[colCod] && cells[colCod].querySelector("a"));
+
+          if (link) {
+            link.click();
+            if (typeof window.jQuery === "function" || typeof window.$ === "function") {
+              try { (window.jQuery || window.$)(link).trigger("click"); } catch (e) {}
+            }
+          } else {
+            const clickTarget = (colNom >= 0 && cells[colNom]) ? cells[colNom] : (cells[2] || cells[1] || targetRow);
+            clickTarget.click();
+            try {
+              clickTarget.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+              targetRow.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+            } catch (e) {}
+          }
         }
       }, 250);
     }
@@ -1444,6 +1463,92 @@ function dentaiSelectServicio(target) {
       servicio: rawTarget,
       textoDetectado: (clickable.textContent || "").trim().slice(0, 80)
     };
+  } catch (err) {
+    return { ok: false, motivo: err.message };
+  }
+}
+
+/* ---------- Apertura por Voz de Fila en Registros Clínicos de Smile ---------- */
+function dentaiOpenRegistroClinico(target) {
+  try {
+    const norm = (s) => String(s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const targetClean = norm(target);
+    if (!targetClean) return { ok: false, motivo: "Registro clínico no especificado." };
+
+    const visible = (el) => {
+      try {
+        const r = el.getBoundingClientRect();
+        const st = window.getComputedStyle(el);
+        return (r.width > 0 || r.height > 0) && st.visibility !== "hidden" && st.display !== "none";
+      } catch (e) {
+        return false;
+      }
+    };
+
+    const tables = Array.from(document.querySelectorAll("table, .table"));
+    let targetRow = null;
+    let targetName = "";
+
+    for (const table of tables) {
+      if (!visible(table)) continue;
+      const rows = Array.from(table.querySelectorAll("tbody tr, tr")).filter((r) => !r.closest("thead") && r.querySelectorAll("td").length >= 2);
+
+      for (const row of rows) {
+        if (!visible(row)) continue;
+        const cells = Array.from(row.querySelectorAll("td, th"));
+        const cellTexts = cells.map((c) => norm(c.textContent));
+        const rowText = cellTexts.join(" ");
+
+        let isMatch = false;
+
+        if (/^\d+$/.test(targetClean)) {
+          const firstCellText = cellTexts[0] || "";
+          if (firstCellText === targetClean || new RegExp(`\\b${targetClean}\\b`).test(rowText)) {
+            isMatch = true;
+          }
+        } else {
+          const targetWords = targetClean.split(/\s+/).filter((w) => w.length >= 2 && !/^(?:abrir|abre|el|la|los|las|registro|numero)$/i.test(w));
+          if (targetWords.length > 0 && targetWords.every((w) => rowText.includes(w))) {
+            isMatch = true;
+          }
+        }
+
+        if (isMatch) {
+          targetRow = row;
+          targetName = cells[2]?.textContent?.trim() || cells[1]?.textContent?.trim() || targetClean;
+          break;
+        }
+      }
+      if (targetRow) break;
+    }
+
+    if (!targetRow) {
+      return { ok: false, motivo: `No se encontró el registro "${target}" en la tabla de Registros Clínicos.` };
+    }
+
+    targetRow.scrollIntoView({ block: "center", behavior: "smooth" });
+    const prevOut = targetRow.style.outline;
+    targetRow.style.outline = "3px solid #0071e3";
+    setTimeout(() => { targetRow.style.outline = prevOut; }, 2500);
+
+    const link = targetRow.querySelector("a") || targetRow.querySelectorAll("td")[2] || targetRow.querySelectorAll("td")[1] || targetRow;
+    link.click();
+    try {
+      link.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      targetRow.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    } catch (e) {}
+    if (typeof window.jQuery === "function" || typeof window.$ === "function") {
+      try { (window.jQuery || window.$)(link).trigger("click"); } catch (e) {}
+    }
+
+    return { ok: true, matched: targetName };
   } catch (err) {
     return { ok: false, motivo: err.message };
   }

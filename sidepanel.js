@@ -354,6 +354,52 @@ async function openServicioInSmile(serviceTarget) {
   }
 }
 
+
+/* ---------- Apertura por Voz de Registros Clínicos (Examen Clínico, Anamnesis, etc.) ---------- */
+async function openRegistroClinicoInSmile(targetRecord) {
+  const t = await activeTab();
+  const tabId = (t && t.id) || (state.tab && state.tab.id);
+  if (!tabId) {
+    setStatus("Abre Smile en la pestaña principal.");
+    return false;
+  }
+
+  setStatus(`Abriendo registro clínico: ${targetRecord}…`);
+
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tabId, allFrames: true },
+      func: dentaiOpenRegistroClinico,
+      args: [targetRecord],
+    });
+
+    let hit = null;
+    if (res && Array.isArray(res)) {
+      for (const r of res) {
+        if (r.result && r.result.ok) {
+          hit = r.result;
+          break;
+        }
+      }
+    }
+
+    if (hit) {
+      speak("Abierto.");
+      setStatus(`Registro abierto: ${hit.matched || targetRecord}.`);
+      return true;
+    } else {
+      const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || `Registro clínico "${targetRecord}" no encontrado.`;
+      speak("No encontrado.");
+      setStatus(motivo);
+      return false;
+    }
+  } catch (err) {
+    console.error("openRegistroClinicoInSmile error:", err);
+    setStatus("Error al abrir registro clínico: " + err.message);
+    return false;
+  }
+}
+
 /* ---------- CONSULTA DE PACIENTE (BASE DE DATOS CLÍNICA / SUPABASE / RENIEC) ---------- */
 async function buscarPaciente(dni, s) {
   if (!dni || dni.length !== 8) return null;
@@ -1515,6 +1561,10 @@ async function processText(rawText) {
         const ok = await selectPatientInSmile(aiResult.criterio_seleccion, "select");
         if (ok) return;
       }
+            if (aiResult.comando === "abrir_registro_clinico" && aiResult.registro_target) {
+        const ok = await openRegistroClinicoInSmile(aiResult.registro_target);
+        if (ok) return;
+      }
       if (aiResult.comando === "abrir_servicio" && aiResult.servicio_target) {
         const ok = await openServicioInSmile(aiResult.servicio_target);
         if (ok) return;
@@ -1589,6 +1639,20 @@ async function processText(rawText) {
   // Se ejecuta si no hay clave de Gemini o si falló la conexión
   // ==========================================
   const detectedLabels = [];
+
+    // Detección de apertura de registros clínicos (ej: "abre examen clínico", "abre 2 examen clínico", "abre anamnesis", "abre registro 26")
+  const regClinCmd = typeof extractOpenRegistroClinico === "function" ? extractOpenRegistroClinico(normRaw) : null;
+  if (regClinCmd && regClinCmd.target) {
+    const ok = await openRegistroClinicoInSmile(regClinCmd.target);
+    if (ok) return;
+  }
+
+  // Detección de navegación por menú del expediente (ej: "abre registros clínicos", "ve a datos generales", "odontograma hallazgos")
+  const expNavCmd = typeof extractExpedienteNav === "function" ? extractExpedienteNav(normRaw) : null;
+  if (expNavCmd && expNavCmd.target) {
+    const ok = await navigateToTab(expNavCmd.target);
+    if (ok) return;
+  }
 
   // --- PASO 1: DETECCIÓN DE FECHA DE NACIMIENTO ---
   const nacObj = extractFechaNacimiento(text);

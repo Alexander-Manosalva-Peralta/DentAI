@@ -57,6 +57,17 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "abre Integral DAENA 4", "abre DAENA 4 CLISMP", "abre dayna 4" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 4 CLISMP"
      * "abre DAENA 4 SIMUL", "abre DAENA 4 simulación", "abre simulador daena 4" -> "comando": "abrir_servicio", "servicio_target": "INTEGRAL DAENA 4 SIMUL"
 
+   - Apertura de Filas en Registros Clínicos (Módulo Registros Clínicos):
+     * "abre examen clínico", "abre 2 examen clínico", "examen clínico" -> "comando": "abrir_registro_clinico", "registro_target": "2 EXAMEN CLÍNICO"
+     * "abre anamnesis", "abre 1 anamnesis", "anamnesis" -> "comando": "abrir_registro_clinico", "registro_target": "1 ANAMNESIS"
+     * "abre diagnóstico presuntivo", "abre 3 diagnóstico presuntivo" -> "comando": "abrir_registro_clinico", "registro_target": "3 DIAGNÓSTICO PRESUNTIVO"
+     * "abre diagnóstico definitivo", "abre 4 diagnóstico definitivo" -> "comando": "abrir_registro_clinico", "registro_target": "4 DIAGNÓSTICO DEFINITIVO"
+     * "abre prótesis parcial", "prótesis parcial y totales" -> "comando": "abrir_registro_clinico", "registro_target": "PRÓTESIS PARCIAL REMOVIBLE Y TOTALES"
+     * "abre evaluación diagnóstico" -> "comando": "abrir_registro_clinico", "registro_target": "DIAG EVALUACIÓN DIAGNÓSTICO"
+     * "abre registro [número]" (ej: 26, 25, 30, 36) -> "comando": "abrir_registro_clinico", "registro_target": "<número>"
+   - Navegación del Menú del Expediente de Smile (22 Secciones):
+     * "datos generales", "registros clínicos", "odontograma hallazgos", "periodontograma", "índice de placa", "índice de sangrado", "índice de retención", "índice de higiene iohs", "exámenes auxiliares", "plan de tratamiento", "presupuesto", "odontograma tratamientos", "interconsulta", "solicitud de materiales", "solicitud de laboratorio", "solicitud de radiología", "solicitud de patología", "solicitud cirugía", "estado de cuenta", "imágenes", "evolución", "documentos paciente" -> "comando": "navegar", "destino_navegacion": "<nombre sección>"
+
 3. EXTRACCIÓN DE DATOS PARA FORMULARIO DE SMILE:
    - Pantalla de Búsqueda / Preregistro:
      * "código 1234", "código del paciente..." -> asigna al campo "Codigo:".
@@ -92,7 +103,8 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
 RESPONDE EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO:
 {
   "es_charla_irrelevante": boolean,
-  "comando": "confirmar" | "descartar" | "navegar" | "bajar" | "subir" | "seccion" | "seleccionar_paciente" | "abrir_paciente" | "abrir_servicio" | null,
+  "comando": "confirmar" | "descartar" | "navegar" | "bajar" | "subir" | "seccion" | "seleccionar_paciente" | "abrir_paciente" | "abrir_servicio" | "abrir_registro_clinico" | null,
+  "registro_target": string | null,
   "servicio_target": string | null,
   "destino_navegacion": string | null,
   "destino_seccion": string | null,
