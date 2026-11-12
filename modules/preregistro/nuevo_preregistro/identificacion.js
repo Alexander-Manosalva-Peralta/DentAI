@@ -54,7 +54,18 @@ const INVALID_NAME_WORDS = new Set([
   "confirmar", "confirmado", "descartar", "cancelar", "borrar", "limpiar", "guardar", "aplicar", "abrir", "navegar",
   "nombre", "nombres", "apellido", "apellidos", "paterno", "materno", "dni", "documento", "celular", "telefono", "teléfono",
   "correo", "email", "arroba", "punto", "calle", "direccion", "dirección", "distrito", "provincia", "departamento",
-  "fecha", "nacimiento", "genero", "género", "sexo", "masculino", "femenino"
+    "fecha", "nacimiento", "genero", "género", "sexo", "masculino", "femenino",
+  // Estados civiles y variantes fonéticas/truncadas
+  "ta", "casado", "casada", "soltero", "soltera", "divorciado", "divorciada", "viudo", "viuda", "conviviente",
+  // Ocupaciones, profesiones y disciplinas académicas
+  "abogado", "abogada", "medico", "médico", "medica", "médica", "ingeniero", "ingeniera", "profesor", "profesora",
+  "docente", "contador", "contadora", "enfermero", "enfermera", "arquitecto", "arquitecta", "policia", "policía",
+  "militar", "chofer", "conductor", "conductora", "estudiante", "empleado", "empleada", "independiente",
+  "jubilado", "jubilada", "comerciante", "obrero", "obrera", "tecnico", "técnica", "profesional", "ama", "casa",
+  "derecho", "medicina", "odontologia", "odontología", "enfermeria", "enfermería", "contabilidad", "administracion", "administración",
+  // Niveles de escolaridad y antecedentes
+  "superior", "universitaria", "universitario", "secundaria", "primaria", "instituto", "estudios", "escolaridad",
+  "alergico", "alérgica", "hipertenso", "hipertensa", "diabetico", "diabética", "paciente", "nuevo", "nueva"
 ]);
 
 const CHATTER_WORDS = /\b(equipo|sistema|aplicacion|configuracion|extension|creditos|cobranzas?|clinica|creu|pantalla|pestana|pestaña|campus|completados?|foto|imagen|perito|tarjeta|pago|plataforma|smile|audio|microfono|ruido|exterior|interior|dieron|dice|dice\s+que|estan?|viendo|enseñar|tres|ambos|rondando|quedo|quedan|hablando)\b/i;
@@ -62,19 +73,21 @@ const CHATTER_WORDS = /\b(equipo|sistema|aplicacion|configuracion|extension|cred
 // Filtra palabras válidas para nombres propios de personas (descarta ruidos, muletillas y charlas como "o sea sí y tú")
 function filterValidNameWords(rawText, maxWords = 3) {
   if (!rawText) return [];
-  const cut = rawText.split(/\s+(?:y\s+luego|luego|despu[eé]s|y\s+despu[eé]s|que|para|con|rectifica|edita|cambia|corrige|confirmar|aplicar|descartar|cancelar|baja|sube)\b/i)[0].trim();
+  const cut = rawText.split(/\s+(?:y\s+luego|luego|despu[eé]s|y\s+despu[eé]s|que|para|con|rectifica|edita|cambia|corrige|confirmar|aplicar|descartar|cancelar|baja|sube|estado\s+civil|ocupaci[oó]n|profesi[oó]n|estudi[oó])\b/i)[0].trim();
   const words = cut.split(/\s+/).filter(Boolean);
   const valid = [];
 
   for (const w of words) {
     const cleanW = w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z]/g, "");
-    if (cleanW.length >= 2 && !INVALID_NAME_WORDS.has(cleanW) && !/\d/.test(w)) {
-      let cap = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-      // Reparación de truncamiento común por fonética o preposición (ej: "Lexander" o "Alexande" -> "Alexander")
-      if (/^(?:alexande|lexander|lexande)$/i.test(cap)) cap = "Alexander";
-      if (/^(?:lejandro|leandro)$/i.test(cap) && /^alej/i.test(w)) cap = "Alejandro";
-      valid.push(cap);
+    // Si alguna palabra aislada es un estado, ocupación o verbo prohibido (ej: "ta", "casado", "abogado"), se anula de inmediato
+    if (INVALID_NAME_WORDS.has(cleanW) || cleanW === "ta" || cleanW.length < 2 || /\d/.test(w)) {
+      return [];
     }
+    let cap = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    // Reparación de truncamiento común por fonética o preposición (ej: "Lexander" o "Alexande" -> "Alexander")
+    if (/^(?:alexande|lexander|lexande)$/i.test(cap)) cap = "Alexander";
+    if (/^(?:lejandro|leandro)$/i.test(cap) && /^alej/i.test(w)) cap = "Alejandro";
+    valid.push(cap);
   }
 
   return valid.slice(0, maxWords);
@@ -245,10 +258,22 @@ function extractDocNum(text) {
 function extractName(text) {
   if (CHATTER_WORDS.test(text)) return null;
 
-  const m = text.match(/(?:^|\s)(?:(?:el\s+)?paciente\s*(?:es|se\s+llama)|nombres?(?:\s*(?:del\s+paciente))?)\s*(?:\bes\b|:|\bde\b|\ba\b)?\s*([a-záéíóúñ\s]+)/i);
+  // AISLAMIENTO TOTAL: Si el dictado describe estado civil, profesión, residencia, etc., y NO contiene
+  // la palabra clave explícita de nombre ("nombre ..."), NUNCA extraerlo como nombre de paciente.
+  const mentionsOtherFields = /(?:estado\s+civil|est[aá]\s+(?:casad|solter|viud|divorciad|conviviente)|ocupaci[oó]n|profesi[oó]n|trabaja|estudi[oó]|abogad|m[eé]dic|ingenier|estudiante|emplead|escolaridad|direcci[oó]n|calle|avenida|distrito|departamento|provincia|factura|dni|documento|edad|a[ñn]os)/i.test(text);
+  const hasExplicitNameKeyword = /\bnombres?(?:\s+(?:del\s+paciente|completo))?\s*(?:es|:|\bde\b|\ba\b)?\s*[a-záéíóúñ]+/i.test(text) || /\bse\s+llama\s+[a-záéíóúñ]+/i.test(text);
+
+  if (mentionsOtherFields && !hasExplicitNameKeyword) {
+    return null;
+  }
+
+  // Solo extraer si hay indicador explícito de nombre ("nombre [es] ...", "nombre del paciente ...", "se llama ...")
+  // Eliminamos completamente "paciente es..." que causaba colisión con "paciente está..." -> "Tá Casado"
+  const m = text.match(/(?:^|\s)(?:nombres?(?:\s+(?:del\s+paciente|completo))?|(?:el\s+paciente\s+)?se\s+llama)\s*(?:\bes\b|:|\bde\b|\ba\b)?\s*([a-záéíóúñ\s]+)/i);
   if (m) {
     let name = m[1].trim().replace(/^(?:[\s:]*(?:\ba\b|\bpor\b|\bes\b|\bde\b)[\s:]*|[\s:]+)+/i, "").trim();
     name = name.replace(/\b(?:registrado|di\s*confirmar|confirmar|listo|por\s*favor)\b/gi, "").trim();
+    name = name.split(/\s+(?:y\s+luego|luego|despu[eé]s|estado\s+civil|ocupaci[oó]n|profesi[oó]n|est[aá]\s+|vive\s+en|con|baja|sube)\b/i)[0].trim();
     const validWords = filterValidNameWords(name, 3);
     if (validWords.length > 0) {
       const dbName = state.currentPatient?.nombres || "";
