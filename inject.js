@@ -1,7 +1,7 @@
 /* DentAI – Funciones inyectadas en Smile (todos los frames).
    Se ejecutan en el contexto del DOM de Smile sin requerir acceso al backend. */
 
-function dentaiScan() {
+function dentaiScan(anamnesisFields = []) {
   const MAX = 200;
   const clean = (s) => (s || "").replace(/\s+/g, " ").replace(/^[*:\s]+|[*:\s]+$/g, "").trim().slice(0, 120);
 
@@ -259,6 +259,10 @@ function dentaiScan() {
   }
 
   const out = [];
+  const hcForm = document.getElementById("hc_form");
+  const isAnamnesis = hcForm && visible(hcForm) && Array.from(document.querySelectorAll("h4.text-c"))
+    .some((h) => /^\s*(?:1\s*)?ANAMNESIS\s*$/i.test(h.textContent) && visible(h));
+  const anamnesisByName = new Map(isAnamnesis ? anamnesisFields.map((f) => [f.name, f]) : []);
   const seenRadio = new Set();
   const els = document.querySelectorAll("input, select, textarea, [contenteditable='true']");
   let k = 0;
@@ -269,7 +273,9 @@ function dentaiScan() {
     let type = tag === "input" ? (el.type || "text").toLowerCase() : tag;
     if (el.isContentEditable && tag !== "input" && tag !== "textarea") type = "richtext";
     if (["password", "hidden", "submit", "button", "reset", "image", "file"].includes(type)) continue;
-    if (el.disabled || el.readOnly || !visible(el)) continue;
+    const anamnesisField = hcForm?.contains(el) ? anamnesisByName.get(el.name) : null;
+    // Los dos detalles condicionales deben poder proponerse antes de activar su selector.
+    if (el.disabled || el.readOnly || (!visible(el) && !anamnesisField?.dependsOn)) continue;
 
     let key, entry;
     el.setAttribute("data-dentai-id", "tmp");
@@ -306,6 +312,12 @@ function dentaiScan() {
 
     el.removeAttribute("data-dentai-id");
     entry.seccion = sectionOf(el);
+    if (anamnesisField) {
+      entry.etiqueta = anamnesisField.label;
+      entry.contexto = "anamnesis";
+      entry.pagina = location.href;
+      entry.dependsOn = anamnesisField.dependsOn || "";
+    }
     entry.key = key;
     entry.name = el.name || "";
     entry.domId = el.id || "";
@@ -319,6 +331,15 @@ function dentaiScan() {
 function dentaiFill(items) {
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
   const results = [];
+  function visibleAnamnesis(el) {
+    if (!el) return false;
+    for (let node = el; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+    }
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 || rect.height > 0;
+  }
 
   function setNative(el, v) {
     const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype
@@ -358,6 +379,11 @@ function dentaiFill(items) {
 
   for (const it of items) {
     try {
+      if (it.contexto === "anamnesis" && (it.pagina !== location.href ||
+          !Array.from(document.querySelectorAll("h4.text-c")).some((h) => /^\s*(?:1\s*)?ANAMNESIS\s*$/i.test(h.textContent) && visibleAnamnesis(h)))) {
+        results.push({ key: it.key, ok: false, motivo: "Abre la misma Anamnesis donde dictaste los datos y vuelve a intentarlo." });
+        continue;
+      }
       if (it.key && it.key.startsWith("g:")) {
         const g = it.key.slice(2);
         const radios = Array.from(document.querySelectorAll('input[type=radio][data-dentai-group="' + CSS.escape(g) + '"]'));
@@ -390,14 +416,16 @@ function dentaiFill(items) {
       }
 
       // 1. Buscar por clave data-dentai-key
-      let el = it.key ? document.querySelector('[data-dentai-key="' + CSS.escape(it.key) + '"]') : null;
+      let el = it.contexto === "anamnesis"
+        ? document.querySelector('#hc_form [name="' + CSS.escape(it.name) + '"]')
+        : it.key ? document.querySelector('[data-dentai-key="' + CSS.escape(it.key) + '"]') : null;
 
       // 2. Fallback por domId o name
-      if (!el && it.domId) el = document.getElementById(it.domId);
-      if (!el && it.name) el = document.querySelector(`[name="${CSS.escape(it.name)}"]`);
+      if (!el && it.contexto !== "anamnesis" && it.domId) el = document.getElementById(it.domId);
+      if (!el && it.contexto !== "anamnesis" && it.name) el = document.querySelector(`[name="${CSS.escape(it.name)}"]`);
 
       // 3. Fallback por etiqueta aproximada
-      if (!el && it.etiqueta) {
+      if (!el && it.contexto !== "anamnesis" && it.etiqueta) {
         const targetClean = norm(it.etiqueta);
         const inputs = Array.from(document.querySelectorAll("input, select, textarea"));
         el = inputs.find((inp) => {
@@ -414,14 +442,31 @@ function dentaiFill(items) {
       }
 
       const tag = el.tagName.toLowerCase();
+      if (it.contexto === "anamnesis") {
+        const hidden = !visibleAnamnesis(tag === "select" ? el.parentElement : el);
+        const dependency = it.dependsOn && document.querySelector('#hc_form [name="' + CSS.escape(it.dependsOn) + '"]');
+        if (el.disabled || el.readOnly || hidden || (it.dependsOn && norm(dependency?.value) !== "aplica")) {
+          results.push({ key: it.key, ok: false, motivo: "El campo está oculto o bloqueado. Activa su opción Aplica y verifica que sea editable." });
+          continue;
+        }
+      }
 
       // SELECT / DROPDOWN (Soporte nativo y Select2 de Smile)
       if (tag === "select") {
         const v = norm(it.valor);
         let opt = null;
 
+        // En Anamnesis nunca elegir por coincidencia parcial (1 no debe convertirse en 10).
+        if (it.contexto === "anamnesis") {
+          opt = Array.from(el.options).find((o) => norm(o.text) === v || norm(o.value) === v);
+          if (!opt) {
+            results.push({ key: it.key, ok: false, motivo: `Opción "${it.valor}" no encontrada en el selector.` });
+            continue;
+          }
+        }
+
         // Búsqueda directa por texto o valor exacto / contenido
-        for (let i = 0; i < el.options.length; i++) {
+        for (let i = 0; it.contexto !== "anamnesis" && i < el.options.length; i++) {
           const o = el.options[i];
           const oText = norm(o.text);
           const oVal = norm(o.value);
@@ -459,7 +504,7 @@ function dentaiFill(items) {
           opt = Array.from(el.options).find((o) => /femenino/i.test(o.text) || o.value === "F");
         }
 
-        if (!opt) {
+        if (!opt && it.contexto !== "anamnesis") {
           // Último recurso: si el texto coincide con cualquier opción
           opt = Array.from(el.options).find((o) => o.text.trim().length > 1 && norm(o.text).includes(v));
         }

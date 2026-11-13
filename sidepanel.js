@@ -55,6 +55,7 @@ async function scan() {
     const res = await chrome.scripting.executeScript({
       target: { tabId: state.tab.id, allFrames: true },
       func: dentaiScan,
+      args: [ANAMNESIS_ACTUAL_FIELDS],
     });
     const all = [];
     let n = 0;
@@ -755,6 +756,41 @@ async function processText(rawText) {
 
   // Comandos de voz directos (ejecución rápida nativa)
   const normRaw = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,;:]+$/, "").trim();
+
+  // Anamnesis tiene prioridad sobre navegación y Gemini para conservar el relato literal.
+  const anamnesis = proposeAnamnesisActual(text, state.fields, state.anamnesisAwaiting);
+  if (anamnesis.handled) {
+    if (anamnesis.awaiting || anamnesis.errors.length) {
+      const context = state.fields.find((f) => f.contexto === "anamnesis");
+      state.anamnesisAwaiting = { ...anamnesis.target, pagina: context.pagina, frameId: context.frameId, expiresAt: Date.now() + 60000 };
+    }
+    if (anamnesis.awaiting) {
+      renderPending();
+      setStatus(`${anamnesis.awaiting.label} seleccionado. Ahora dicta el valor, por ejemplo: "el valor dolor de muelas".`);
+      speak("Dicta el valor.");
+      return;
+    }
+    if (anamnesis.errors.length) {
+      setStatus(anamnesis.errors.join(" "));
+      speak("Revisa el valor.");
+      return;
+    }
+    state.anamnesisAwaiting = null;
+    for (const [id, pending] of state.pending) {
+      if (pending.field?.contexto === "anamnesis" && anamnesis.remove.includes(pending.field.name)) state.pending.delete(id);
+    }
+    for (const { field, valor } of anamnesis.entries) {
+      state.pending.set(`anamnesis:${field.frameId}:${field.name}`, { valor, label: field.etiqueta, field });
+    }
+    renderPending();
+    speak("Listo.");
+    setStatus('Anamnesis lista en la propuesta. Revisa los datos y di "confirmar" para llenar Smile.');
+    return;
+  }
+  if (state.anamnesisAwaiting) {
+    state.anamnesisAwaiting = null;
+    renderPending();
+  }
 
   // 1. NAVEGACIÓN DIRECTA A SECCIONES DEL FORMULARIO DE SMILE
   // Ejemplos: "ve a Datos de Identificación", "sube a Factura", "ve a Contacto", "ve a Dirección", "sube a Otros datos", "ir a otros datos"
@@ -2035,13 +2071,15 @@ function renderPending() {
 
   if (!state.pending.size) {
     box.className = "empty";
-    box.textContent = "Esperando dictado (ej: “DNI 72 73 62 89”, “fecha de nacimiento 22 02 2006”)…";
+    box.textContent = state.anamnesisAwaiting
+      ? `${state.anamnesisAwaiting.label} seleccionado. Dicta su valor.`
+      : "Esperando dictado (ej: “DNI 72 73 62 89”, “fecha de nacimiento 22 02 2006”)…";
   } else {
     box.className = "";
   }
 
   for (const [id, v] of state.pending) {
-    const f = state.fields.find((x) => x.id === id);
+    const f = v.field || state.fields.find((x) => x.id === id);
     if (!f) continue;
     const d = document.createElement("div");
     d.className = "item";
@@ -2059,6 +2097,7 @@ function renderPending() {
 
 function discard() {
   state.pending.clear();
+  state.anamnesisAwaiting = null;
   if (state.lockedFields) state.lockedFields.clear();
   state.currentPatient = null;
   if ($("result")) $("result").innerHTML = "";
@@ -2067,6 +2106,10 @@ function discard() {
 
 /* ---------- Aplicar datos en Smile ---------- */
 async function apply() {
+  if (state.anamnesisAwaiting) {
+    state.anamnesisAwaiting = null;
+    renderPending();
+  }
   if (!state.pending.size) {
     setStatus("No hay datos pendientes para llenar en Smile. Dicta datos o un DNI.");
     const resultBox = $("result");
@@ -2085,7 +2128,7 @@ async function apply() {
 
   const byFrame = new Map();
   for (const [id, v] of state.pending) {
-    const f = state.fields.find((x) => x.id === id);
+    const f = v.field || state.fields.find((x) => x.id === id);
     if (!f) continue;
     if (!byFrame.has(f.frameId)) byFrame.set(f.frameId, []);
     byFrame.get(f.frameId).push({
@@ -2097,11 +2140,16 @@ async function apply() {
       etiqueta: f.etiqueta,
       seccion: f.seccion,
       tipo: f.tipo,
+      contexto: f.contexto,
+      pagina: f.pagina,
+      dependsOn: f.dependsOn,
     });
   }
 
   const ok = [], fail = [];
   for (const [frameId, items] of byFrame) {
+    // Activar Aplica antes de escribir el detalle, incluso al rectificar una propuesta previa.
+    items.sort((a, b) => Number(Boolean(a.dependsOn)) - Number(Boolean(b.dependsOn)));
     try {
       const [r] = await chrome.scripting.executeScript({
         target: { tabId: state.tab.id, frameIds: [frameId] },
@@ -2114,7 +2162,7 @@ async function apply() {
     }
   }
 
-  const name = (id) => (state.fields.find((x) => x.id === id) || {}).etiqueta || "campo";
+  const name = (id) => state.pending.get(id)?.label || (state.fields.find((x) => x.id === id) || {}).etiqueta || "campo";
   const resultBox = $("result");
   if (resultBox) {
     resultBox.innerHTML =
@@ -2125,7 +2173,7 @@ async function apply() {
   if (ok.length > 0) {
     speak("Llenado.");
     setStatus(`${ok.length} campo(s) llenado(s) en Smile exitosamente.`);
-    state.pending.clear();
+    ok.forEach((item) => state.pending.delete(item.id));
     renderPending();
   } else {
     speak("Error.");

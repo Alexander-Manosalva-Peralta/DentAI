@@ -23,3 +23,6 @@ yarn-error.log*
 # Credenciales y variables locales de desarrollo
 .env
 .env.local
+
+# Dependencias de pruebas locales
+node_modules/
