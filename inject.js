@@ -262,7 +262,11 @@ function dentaiScan(anamnesisFields = []) {
   const hcForm = document.getElementById("hc_form");
   const isAnamnesis = hcForm && visible(hcForm) && Array.from(document.querySelectorAll("h4.text-c"))
     .some((h) => /^\s*(?:1\s*)?ANAMNESIS\s*$/i.test(h.textContent) && visible(h));
-  const anamnesisByName = new Map(isAnamnesis ? anamnesisFields.map((f) => [f.name, f]) : []);
+  const anamnesisByName = new Map();
+  if (isAnamnesis) for (const field of anamnesisFields) {
+    if (!anamnesisByName.has(field.name)) anamnesisByName.set(field.name, []);
+    anamnesisByName.get(field.name).push(field);
+  }
   const seenRadio = new Set();
   const els = document.querySelectorAll("input, select, textarea, [contenteditable='true']");
   let k = 0;
@@ -273,8 +277,10 @@ function dentaiScan(anamnesisFields = []) {
     let type = tag === "input" ? (el.type || "text").toLowerCase() : tag;
     if (el.isContentEditable && tag !== "input" && tag !== "textarea") type = "richtext";
     if (["password", "hidden", "submit", "button", "reset", "image", "file"].includes(type)) continue;
-    const anamnesisField = hcForm?.contains(el) ? anamnesisByName.get(el.name) : null;
-    // Los dos detalles condicionales deben poder proponerse antes de activar su selector.
+    const anamnesisField = (anamnesisByName.get(el.name) || []).find((field) =>
+      (field.scope === "diagnostico" ? el.closest("#diagnosticoCie") : hcForm?.contains(el)) &&
+      (!field.domId || field.domId === el.id) && (!field.optionValue || field.optionValue === el.value));
+    // Incluir los detalles condicionales para proponerlos antes de activar su selector.
     if (el.disabled || el.readOnly || (!visible(el) && !anamnesisField?.dependsOn)) continue;
 
     let key, entry;
@@ -305,6 +311,9 @@ function dentaiScan(anamnesisFields = []) {
           .map((o) => clean(o.text || o.innerText || o.value))
           .filter((t) => t && !/^::seleccione::$/i.test(t))
           .slice(0, 40);
+        if (anamnesisField?.scope === "diagnostico") {
+          entry.opcionesValores = Array.from(el.options).filter((o) => o.value).map((o) => ({ text: clean(o.text), value: o.value }));
+        }
       }
       key = "e:" + k;
       el.setAttribute("data-dentai-key", key);
@@ -317,6 +326,11 @@ function dentaiScan(anamnesisFields = []) {
       entry.contexto = "anamnesis";
       entry.pagina = location.href;
       entry.dependsOn = anamnesisField.dependsOn || "";
+      entry.dependsValue = anamnesisField.dependsValue || "Aplica";
+      entry.dependsOnId = anamnesisField.dependsOnId || "";
+      entry.dependsChecked = Boolean(anamnesisField.dependsChecked);
+      entry.optionValue = anamnesisField.optionValue;
+      entry.scope = anamnesisField.scope || "form";
     }
     entry.key = key;
     entry.name = el.name || "";
@@ -326,6 +340,45 @@ function dentaiScan(anamnesisFields = []) {
     out.push(entry);
   }
   return out;
+}
+
+// Solo acciona botones del bloque CIE concreto, nunca Guardar del expediente.
+function dentaiAnamnesisAction(action, expectedPage) {
+  const visible = (element) => {
+    if (!element) return false;
+    for (let node = element; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+    }
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 || rect.height > 0;
+  };
+  const norm = (text) => (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (location.href !== expectedPage || !Array.from(document.querySelectorAll("h4.text-c")).some((h) => /^(?:1\s*)?anamnesis$/.test(norm(h.textContent)) && visible(h))) {
+    return { ok: false, message: "Abre la Anamnesis donde estás trabajando y actualiza los campos." };
+  }
+  const modal = document.getElementById("diagnosticoCie");
+  let button;
+  if (action.type === "open") {
+    if (!/^renglon_(?:4_1240|5_(?:20|30|40|50|60|70|80))$/.test(action.rowId)) return { ok: false, message: "Bloque CIE no reconocido." };
+    const row = document.getElementById(action.rowId);
+    if (!visible(row)) return { ok: false, message: "Marca y confirma primero el familiar correspondiente para abrir sus diagnósticos." };
+    button = Array.from(row.querySelectorAll("button")).find((b) => norm(b.textContent) === "anadir" && visible(b));
+  } else {
+    if (!visible(modal)) return { ok: false, message: "Abre primero Añadir diagnóstico." };
+    if (action.type === "save") {
+      for (const id of ["typeCie10", "classification", "diagnostic"]) {
+        const field = modal.querySelector(`#${id}`);
+        if (field && !field.disabled && visible(field.parentElement) && !field.value) return { ok: false, message: "Completa las opciones del catálogo antes de guardar el diagnóstico." };
+      }
+      button = Array.from(modal.querySelectorAll("button")).find((b) => norm(b.textContent) === "guardar");
+    } else if (action.type === "close") {
+      button = Array.from(modal.querySelectorAll("button")).find((b) => norm(b.textContent) === "cerrar");
+    }
+  }
+  if (!button || button.disabled) return { ok: false, message: "El botón solicitado no está disponible en este bloque." };
+  button.click();
+  return { ok: true, message: action.type === "open" ? "Cuadro de diagnóstico abierto. Dicta tipo de diagnóstico y su opción." : action.type === "save" ? "Se pulsó Guardar del diagnóstico. Verifica la nueva fila en el bloque correspondiente." : "Cuadro de diagnóstico cerrado." };
 }
 
 function dentaiFill(items) {
@@ -416,8 +469,10 @@ function dentaiFill(items) {
       }
 
       // 1. Buscar por clave data-dentai-key
+      const anamnesisRoot = it.scope === "diagnostico" ? document.getElementById("diagnosticoCie") : document.getElementById("hc_form");
       let el = it.contexto === "anamnesis"
-        ? document.querySelector('#hc_form [name="' + CSS.escape(it.name) + '"]')
+        ? (it.domId ? anamnesisRoot?.querySelector('[id="' + CSS.escape(it.domId) + '"]')
+          : anamnesisRoot?.querySelector('[name="' + CSS.escape(it.name) + '"]:not([type="hidden"])'))
         : it.key ? document.querySelector('[data-dentai-key="' + CSS.escape(it.key) + '"]') : null;
 
       // 2. Fallback por domId o name
@@ -444,9 +499,11 @@ function dentaiFill(items) {
       const tag = el.tagName.toLowerCase();
       if (it.contexto === "anamnesis") {
         const hidden = !visibleAnamnesis(tag === "select" ? el.parentElement : el);
-        const dependency = it.dependsOn && document.querySelector('#hc_form [name="' + CSS.escape(it.dependsOn) + '"]');
-        if (el.disabled || el.readOnly || hidden || (it.dependsOn && norm(dependency?.value) !== "aplica")) {
-          results.push({ key: it.key, ok: false, motivo: "El campo está oculto o bloqueado. Activa su opción Aplica y verifica que sea editable." });
+        const dependency = it.dependsOn && (it.dependsOnId ? document.getElementById(it.dependsOnId)
+          : document.querySelector('#hc_form [name="' + CSS.escape(it.dependsOn) + '"]:not([type="hidden"])'));
+        const dependencyReady = !it.dependsOn || (it.dependsChecked ? dependency?.checked : norm(dependency?.value) === norm(it.dependsValue || "Aplica"));
+        if (el.type === "hidden" || el.disabled || el.readOnly || hidden || !dependencyReady || (it.optionValue && el.value !== it.optionValue)) {
+          results.push({ key: it.key, ok: false, motivo: "El campo está oculto o bloqueado. Activa primero su opción correspondiente y verifica que sea editable." });
           continue;
         }
       }
@@ -458,7 +515,7 @@ function dentaiFill(items) {
 
         // En Anamnesis nunca elegir por coincidencia parcial (1 no debe convertirse en 10).
         if (it.contexto === "anamnesis") {
-          opt = Array.from(el.options).find((o) => norm(o.text) === v || norm(o.value) === v);
+          opt = Array.from(el.options).find((o) => norm(o.value) === v) || Array.from(el.options).find((o) => norm(o.text) === v);
           if (!opt) {
             results.push({ key: it.key, ok: false, motivo: `Opción "${it.valor}" no encontrada en el selector.` });
             continue;
@@ -554,6 +611,18 @@ function dentaiFill(items) {
 
       } else if (el.type === "checkbox" || el.type === "radio") {
         const want = /^(true|si|sí|1|marcado)$/i.test(String(it.valor).trim());
+        if (it.contexto === "anamnesis") {
+          // El clic nativo ya alterna el estado. No asignarlo antes ni hacer clic también en el padre.
+          if (el.checked !== want) el.click();
+          try {
+            const jq = window.jQuery || window.$;
+            if (typeof jq === "function" && typeof jq(el).iCheck === "function") jq(el).iCheck(want ? "check" : "uncheck");
+          } catch (e) {}
+          fire(el);
+          mark(el);
+          results.push({ key: it.key, ok: el.checked === want, motivo: el.checked === want ? "" : "No se pudo cambiar la opción." });
+          continue;
+        }
         if (el.checked !== want) {
           el.checked = want;
           el.click();
