@@ -404,6 +404,60 @@ async function openRegistroClinicoInSmile(targetRecord) {
   }
 }
 
+/* ---------- Manejo por Voz de la Imagen Interactiva de Lesiones (Smile UPCH) ---------- */
+async function handleInteractiveLesionVoice(cmd) {
+  const t = await activeTab();
+  const tabId = (t && t.id) || (state.tab && state.tab.id);
+  if (!tabId) {
+    setStatus("Abre Smile en la pestaña principal.");
+    return false;
+  }
+
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tabId, allFrames: true },
+      func: dentaiHandleInteractiveLesion,
+      args: [cmd],
+    });
+
+    let hit = null;
+    if (res && Array.isArray(res)) {
+      for (const r of res) {
+        if (r.result && r.result.ok) {
+          hit = r.result;
+          break;
+        }
+      }
+    }
+
+    if (hit) {
+      if (cmd.action === "abrir_modal_lesiones") {
+        speak("Abierto.");
+        setStatus(`Imagen interactiva de lesiones ${cmd.target || ""} abierta.`);
+      } else if (cmd.action === "cerrar_modal_lesiones") {
+        speak("Cerrado.");
+        setStatus("Imagen interactiva cerrada.");
+      } else if (cmd.action === "eliminar_lesion") {
+        speak("Eliminado.");
+        setStatus(`Tabla de lesión en ${cmd.region} eliminada.`);
+      } else if (cmd.action === "asignar_lesion") {
+        speak("Registrado.");
+        setStatus(`Lesión ${cmd.lesion} asignada en ${cmd.region}.`);
+      }
+      return true;
+    } else {
+      const motivo = (res && res[0] && res[0].result && res[0].result.motivo) || "No se pudo realizar la acción en la imagen interactiva.";
+      speak("Revisa la pantalla.");
+      setStatus(motivo);
+      return false;
+    }
+  } catch (err) {
+    console.error("handleInteractiveLesionVoice error:", err);
+    setStatus("Error en imagen interactiva: " + err.message);
+    return false;
+  }
+}
+
 /* ---------- CONSULTA DE PACIENTE (BASE DE DATOS CLÍNICA / SUPABASE / RENIEC) ---------- */
 async function buscarPaciente(dni, s) {
   if (!dni || dni.length !== 8) return null;
@@ -790,6 +844,28 @@ async function processText(rawText) {
   if (state.anamnesisAwaiting) {
     state.anamnesisAwaiting = null;
     renderPending();
+  }
+
+  // 0. EXAMEN CLÍNICO (PRIORIDAD LOCAL / NLP CLÍNICO UPCH)
+  if (typeof proposeExamenClinico === "function") {
+    const examen = proposeExamenClinico(text, state.fields);
+    if (examen && examen.handled) {
+      if (examen.interactiveCommand) {
+        await handleInteractiveLesionVoice(examen.interactiveCommand);
+        return;
+      }
+      if (examen.entries && examen.entries.length > 0) {
+        const addedLabels = [];
+        for (const { field, valor } of examen.entries) {
+          state.pending.set(field.id, { valor, label: field.etiqueta, field });
+          addedLabels.push(`${field.etiqueta} (${valor})`);
+        }
+        renderPending();
+        speak("Listo.");
+        setStatus(`Campos listos: ${addedLabels.join(", ")}. Di "confirmar" para llenar en Smile.`);
+        return;
+      }
+    }
   }
 
   // 1. NAVEGACIÓN DIRECTA A SECCIONES DEL FORMULARIO DE SMILE
@@ -1967,84 +2043,14 @@ async function processText(rawText) {
     }
   }
 
-  // --- PASO 21: EXAMEN CLÍNICO (ECTOSCOPIA, FUNCIONES VITALES, PESO Y TALLA) ---
-  if (typeof extractEctoscopia === "function") {
-    const ecto = extractEctoscopia(text);
-    if (ecto.apreciacionGeneral) {
-      const f = findField(null, /apreciaci[oó]n\s+general/i);
-      if (f) { state.pending.set(f.id, { valor: ecto.apreciacionGeneral, label: "Apreciación General" }); detectedLabels.push(`Apreciación General (${ecto.apreciacionGeneral})`); }
-    }
-    if (ecto.estadoNutricional) {
-      const f = findField(null, /nutricional/i);
-      if (f) { state.pending.set(f.id, { valor: ecto.estadoNutricional, label: "Estado Nutricional" }); detectedLabels.push(`Estado Nutricional (${ecto.estadoNutricional})`); }
-    }
-    if (ecto.estadoHidratacion) {
-      const f = findField(null, /hidrataci[oó]n/i);
-      if (f) { state.pending.set(f.id, { valor: ecto.estadoHidratacion, label: "Estado Hidratación" }); detectedLabels.push(`Estado Hidratación (${ecto.estadoHidratacion})`); }
-    }
-    if (ecto.lucidez) {
-      const f = findField(null, /lucidez/i);
-      if (f) { state.pending.set(f.id, { valor: ecto.lucidez, label: "Lucidez y Orientación" }); detectedLabels.push("Lucidez (LOTEP)"); }
-    }
-    if (ecto.colaboracion) {
-      const f = findField(null, /colaboraci[oó]n/i);
-      if (f) { state.pending.set(f.id, { valor: ecto.colaboracion, label: "Grado de Colaboración" }); detectedLabels.push(`Colaboración (${ecto.colaboracion})`); }
-    }
-  }
-
-  if (typeof extractPesoTalla === "function") {
-    const pt = extractPesoTalla(text);
-    if (pt.peso) {
-      const f = findField(null, /peso/i);
-      if (f) { state.pending.set(f.id, { valor: pt.peso, label: "Peso (Kg)" }); detectedLabels.push(`Peso (${pt.peso} kg)`); }
-    }
-    if (pt.talla) {
-      const f = findField(null, /talla/i);
-      if (f) { state.pending.set(f.id, { valor: pt.talla, label: "Talla (M)" }); detectedLabels.push(`Talla (${pt.talla} m)`); }
-    }
-    if (pt.imc) {
-      const f = findField(null, /imc/i);
-      if (f) { state.pending.set(f.id, { valor: pt.imc, label: "IMC" }); detectedLabels.push(`IMC (${pt.imc})`); }
-    }
-  }
-
-  if (typeof extractFuncionesVitales === "function") {
-    const fv = extractFuncionesVitales(text);
-    if (fv.temperatura) {
-      const f = findField(null, /temperatura\s+corporal|corporal/i) || findField(null, /temperatura/i);
-      if (f) { state.pending.set(f.id, { valor: fv.temperatura, label: "Temperatura Corporal" }); detectedLabels.push(`Temp (${fv.temperatura} °C)`); }
-    }
-    if (fv.frecuenciaRespiratoria) {
-      const f = findField(null, /respiratoria|respiraci[oó]n/i);
-      if (f) { state.pending.set(f.id, { valor: fv.frecuenciaRespiratoria, label: "Frecuencia Respiratoria" }); detectedLabels.push(`Frec. Resp (${fv.frecuenciaRespiratoria}/min)`); }
-    }
-    if (fv.pulso) {
-      const f = findField(null, /pulso|card[ií]aca/i);
-      if (f) { state.pending.set(f.id, { valor: fv.pulso, label: "Pulso" }); detectedLabels.push(`Pulso (${fv.pulso}/min)`); }
-    }
-    if (fv.presionArterial) {
-      const f = findField(null, /presi[oó]n\s+arterial|presi[oó]n/i);
-      if (f) { state.pending.set(f.id, { valor: fv.presionArterial, label: "Presión Arterial" }); detectedLabels.push(`PA (${fv.presionArterial})`); }
-    }
-  }
-
-  if (typeof extractEstomatologico === "function") {
-    const estom = extractEstomatologico(text);
-    if (estom.respiracion) {
-      const f = findField(null, /respiraci[oó]n/i);
-      if (f) { state.pending.set(f.id, { valor: estom.respiracion, label: "Respiración" }); detectedLabels.push(`Respiración (${estom.respiracion})`); }
-    }
-    if (estom.simetriaFacial) {
-      const f = findField(null, /simetr[ií]a/i);
-      if (f) { state.pending.set(f.id, { valor: estom.simetriaFacial, label: "Simetría Facial" }); detectedLabels.push(`Simetría (${estom.simetriaFacial})`); }
-    }
-    if (estom.aperturaBucal) {
-      const f = findField(null, /apertura/i);
-      if (f) { state.pending.set(f.id, { valor: estom.aperturaBucal, label: "Apertura Bucal" }); detectedLabels.push(`Apertura (${estom.aperturaBucal})`); }
-    }
-    if (estom.atm) {
-      const f = findField(null, /a\.?t\.?m\.?/i);
-      if (f) { state.pending.set(f.id, { valor: estom.atm, label: "A.T.M." }); detectedLabels.push(`ATM (${estom.atm})`); }
+  // --- PASO 21: EXAMEN CLÍNICO (ECTOSCOPIA, FUNCIONES VITALES, PESO Y TALLA, PIEL, ESTOMATOLÓGICO) ---
+  if (typeof proposeExamenClinico === "function") {
+    const examen = proposeExamenClinico(text, state.fields);
+    if (examen && examen.handled && examen.entries) {
+      for (const { field, valor } of examen.entries) {
+        state.pending.set(field.id, { valor, label: field.etiqueta, field });
+        detectedLabels.push(`${field.etiqueta} (${valor})`);
+      }
     }
   }
 

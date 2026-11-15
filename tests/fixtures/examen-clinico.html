@@ -1,0 +1,275 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><body>
+<h4 class="text-c">2 EXAMEN CLÍNICO</h4>
+<div id="hc_form">
+  <div class="card">
+    <h4>A - GENERAL</h4>
+    <h5>ECTOSCOPIA</h5>
+    <table>
+      <tbody>
+        <tr>
+          <td>Apreciación General:</td>
+          <td>
+            <select name="apreciacion_general">
+              <option value="">::seleccione::</option>
+              <option value="ABEG">ABEG</option>
+              <option value="AREG">AREG</option>
+              <option value="AMEG">AMEG</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_areg" style="display: none">
+          <td>AREG:</td>
+          <td><textarea name="areg_obs"></textarea></td>
+        </tr>
+        <tr id="renglon_ameg" style="display: none">
+          <td>AMEG:</td>
+          <td><textarea name="ameg_obs"></textarea></td>
+        </tr>
+        <tr>
+          <td>Apreciación del Estado Nutricional:</td>
+          <td>
+            <select name="estado_nutricional">
+              <option value="">::seleccione::</option>
+              <option value="ABEN">ABEN</option>
+              <option value="AREN">AREN</option>
+              <option value="AMEN">AMEN</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_aren" style="display: none">
+          <td>AREN:</td>
+          <td><textarea name="aren_obs"></textarea></td>
+        </tr>
+        <tr id="renglon_amen" style="display: none">
+          <td>AMEN:</td>
+          <td><textarea name="amen_obs"></textarea></td>
+        </tr>
+        <tr>
+          <td>Apreciación del Estado de Hidratación:</td>
+          <td>
+            <select name="estado_hidratacion">
+              <option value="">::seleccione::</option>
+              <option value="ABEH">ABEH</option>
+              <option value="AREH">AREH</option>
+              <option value="AMEH">AMEH</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_areh" style="display: none">
+          <td>AREH:</td>
+          <td><textarea name="areh_obs"></textarea></td>
+        </tr>
+        <tr id="renglon_ameh" style="display: none">
+          <td>AMEH:</td>
+          <td><textarea name="ameh_obs"></textarea></td>
+        </tr>
+        <tr>
+          <td>Lucidez y Orientación</td>
+          <td><input type="checkbox" name="lucidez_orientacion" id="lucidez_chk"></td>
+        </tr>
+        <tr>
+          <td>Persona con necesidades especiales</td>
+          <td>
+            <select name="necesidades_especiales">
+              <option value="">::seleccione::</option>
+              <option value="Si">Si</option>
+              <option value="No">No</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Facies</td>
+          <td>
+            <select name="facies">
+              <option value="">::seleccione::</option>
+              <option value="No característica">No característica</option>
+              <option value="Característica">Característica</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Grado de Colaboración</td>
+          <td>
+            <select name="colaboracion">
+              <option value="">::seleccione::</option>
+              <option value="Receptivo">Receptivo</option>
+              <option value="No receptivo">No receptivo</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h5>PESO Y TALLA</h5>
+    <table>
+      <tbody>
+        <tr>
+          <td>Peso (Kg):</td>
+          <td><input name="peso_kg"></td>
+        </tr>
+        <tr>
+          <td>Talla (M):</td>
+          <td><input name="talla_m"></td>
+        </tr>
+        <tr>
+          <td>IMC:</td>
+          <td><input name="imc_val" readonly></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h5>PIEL Y ANEXOS</h5>
+    <table>
+      <tbody>
+        <tr>
+          <td>Temperatura</td>
+          <td>
+            <select name="temperatura_piel">
+              <option value="">::seleccione::</option>
+              <option value="Normal">Normal</option>
+              <option value="Aumentada">Aumentada</option>
+              <option value="Disminuida">Disminuida</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_aumentada" style="display: none">
+          <td>Aumentada:</td>
+          <td><input name="aumentada_obs"></td>
+        </tr>
+        <tr id="renglon_disminuida" style="display: none">
+          <td>Disminuida:</td>
+          <td><input name="disminuida_obs"></td>
+        </tr>
+        <tr>
+          <td>Lesiones Anterior:</td>
+          <td>
+            <select name="lesiones_anterior">
+              <option value="">::seleccione::</option>
+              <option value="Ausentes">Ausentes</option>
+              <option value="Presentes">Presentes</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_lesiones_ant_btn" style="display: none">
+          <td>Tipo de Lesión</td>
+          <td><button type="button" class="btn" id="btn_editar_lesion_ant">Editar</button></td>
+        </tr>
+        <tr>
+          <td>Lesiones Posterior:</td>
+          <td>
+            <select name="lesiones_posterior">
+              <option value="">::seleccione::</option>
+              <option value="Ausente">Ausente</option>
+              <option value="Presentes">Presentes</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Anexos:</td>
+          <td>
+            <select name="anexos">
+              <option value="">::seleccione::</option>
+              <option value="Normal">Normal</option>
+              <option value="Alterado">Alterado</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h5>FUNCIONES VITALES</h5>
+    <table>
+      <tbody>
+        <tr>
+          <td>Temperatura Corporal (°C):</td>
+          <td><input name="temperatura_corporal"></td>
+        </tr>
+        <tr>
+          <td>Frecuencia respiratoria ( / min):</td>
+          <td><input name="frecuencia_respiratoria"></td>
+        </tr>
+        <tr>
+          <td>Pulso ( / min):</td>
+          <td><input name="pulso"></td>
+        </tr>
+        <tr>
+          <td>Presión arterial (mm Hg):</td>
+          <td><input name="presion_arterial"></td>
+        </tr>
+        <tr>
+          <td>Observación:</td>
+          <td><textarea name="observacion_vitales"></textarea></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h4>B - ESTOMATOLÓGICO EXTRAORAL</h4>
+    <table>
+      <tbody>
+        <tr>
+          <td>Respiración:</td>
+          <td>
+            <select name="respiracion">
+              <option value="">::seleccione::</option>
+              <option value="Nasal">Nasal</option>
+              <option value="Bucal">Bucal</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_respiracion_desc" style="display: none">
+          <td>Describa:</td>
+          <td><textarea name="respiracion_describa"></textarea></td>
+        </tr>
+        <tr>
+          <td>Otros hábitos:</td>
+          <td>
+            <select name="otros_habitos">
+              <option value="">::seleccione::</option>
+              <option value="Ausentes">Ausentes</option>
+              <option value="Presentes">Presentes</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="renglon_otros_habitos_desc" style="display: none">
+          <td>Describa:</td>
+          <td><textarea name="otros_habitos_describa"></textarea></td>
+        </tr>
+        <tr>
+          <td>Simetría Facial:</td>
+          <td>
+            <select name="simetria_facial">
+              <option value="">::seleccione::</option>
+              <option value="Simétrico">Simétrico</option>
+              <option value="Asimétrico">Asimétrico</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Apertura Bucal:</td>
+          <td>
+            <select name="apertura_bucal">
+              <option value="">::seleccione::</option>
+              <option value="Aparentemente normal">Aparentemente normal</option>
+              <option value="Con limitación">Con limitación</option>
+              <option value="Con desviación">Con desviación</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>A.T.M.:</td>
+          <td>
+            <select name="atm">
+              <option value="">::seleccione::</option>
+              <option value="Aparentemente normal">Aparentemente normal</option>
+              <option value="Con ruidos">Con ruidos</option>
+              <option value="Con dolor">Con dolor</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body></html>

@@ -92,26 +92,49 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
    - Examen Clínico y Triaje Estomatológico (Módulo 2 EXAMEN CLÍNICO):
      * REGLA OBLIGATORIA PARA DESPLEGABLES (select): Si el campo tiene 'opciones', DEBES seleccionar obligatoriamente una de las opciones textuales disponibles en el array 'opciones':
        - Apreciación General: "ABEG" (Buen Estado General), "AREG" (Regular Estado General), "AMEG" (Mal Estado General).
+         * Si es AREG y el usuario dicta observación, asigna el texto al campo "AREG:".
+         * Si es AMEG y dicta observación, asigna el texto al campo "AMEG:".
        - Apreciación del Estado Nutricional: "ABEN" (Buen Estado Nutricional), "AREN" (Regular Estado Nutricional), "AMEN" (Mal Estado Nutricional).
+         * Si es AREN y dicta observación, asigna el texto al campo "AREN:".
+         * Si es AMEN y dicta observación, asigna el texto al campo "AMEN:".
        - Apreciación del Estado de Hidratación: "ABEH" (Buen Estado de Hidratación), "AREH" (Regular Estado de Hidratación), "AMEH" (Mal Estado de Hidratación / Deshidratado).
-       - Lucidez y Orientación: "LOTEP" (Lúcido, Orientado en Tiempo, Espacio y Persona) o "Si".
-       - Grado de Colaboración: "COLABORADOR", "POCO COLABORADOR", "NO COLABORADOR".
-       - Facies: "NO CARACTERÍSTICA", "DOLOROSA", etc.
+         * Si es AREH y dicta observación, asigna el texto al campo "AREH:".
+         * Si es AMEH y dicta observación, asigna el texto al campo "AMEH:".
+       - Lucidez y Orientación: ES UN CHECKBOX. "marcar lucidez", "lucidez y orientación sí", "lúcido y orientado", "LOTEP" -> "true". "desmarcar lucidez", "lucidez no" -> "false".
+       - Persona con necesidades especiales: "persona con necesidades especiales sí", "es una persona con necesidades especiales" -> "Si". "persona con necesidades especiales no", "no es persona con necesidades especiales" -> "No".
+       - Facies: Tolerar "facies" o "fascies" (con s intermedia). "facies característica" -> "Característica". "facies no característica" -> "No característica".
+       - Grado de Colaboración: "receptivo", "colaborador", "buena colaboración" -> "Receptivo". "no receptivo", "poco colaborador" -> "No receptivo".
      * Peso y Talla:
-       - "peso [número]" -> asigna el número en kg (ej: "70", "65.5") al campo "Peso (Kg):".
-       - "talla [número]" -> asigna en metros con punto decimal (ej: "1.70", "1.65") al campo "Talla (M):".
+       - "peso [número]" -> asigna el número en kg (ej: "80", "100") al campo "Peso (Kg):".
+       - "talla [número]" -> asigna en metros con punto decimal (ej: "1.40", "140 cm" -> "1.40") al campo "Talla (M):".
        - Si se dictan ambos, calcula IMC = Peso / (Talla * Talla) redondeado a 1 decimal y asígnalo al campo "IMC:".
+     * Piel y Anexos:
+       - Temperatura (en Piel y Anexos): "Normal", "Aumentada" o "Disminuida".
+         * Si es Aumentada y dicta observación, asigna el texto al campo "Aumentada:".
+         * Si es Disminuida y dicta observación, asigna el texto al campo "Disminuida:".
+       - Lesiones Anterior: "Ausentes" o "Presentes".
+       - Lesiones Posterior: "Ausentes" (o "Ausente") o "Presentes".
+       - Anexos: "Normal" o "Alterado".
      * Funciones Vitales:
        - "temperatura [número]" -> asigna en °C (ej: "36.5", "37") al campo "Temperatura Corporal (°C):".
        - "frecuencia respiratoria [número]" o "respiración [número]" -> asigna al campo "Frecuencia respiratoria ( / min):".
        - "pulso [número]" o "frecuencia cardíaca [número]" -> asigna al campo "Pulso ( / min):".
        - "presión arterial [número sobre número]" (ej: "120/80") -> asigna al campo "Presión arterial (mm Hg):".
+       - Observación en funciones vitales / general: asigna el texto dictado al campo "Observación:" eliminando cualquier prefijo como "la observación sería que", "en observación coloca que", "observación:". Solo asigna el contenido clínico puro.
      * Estomatológico Extraoral y Oclusión:
-       - "respiración nasal/bucal/mixta" -> asigna al campo "RESPIRACIÓN".
-       - "simetría facial" -> "SIMÉTRICO" o "ASIMÉTRICO".
+       - "respiración nasal" -> "Nasal".
+       - "respiración bucal" -> "Bucal". Si dicta descripción ("la descripción de respiración es...", "describa..."), asígnalo a "Describa (Respiración)".
+       - "otros hábitos ausentes" -> "Ausentes".
+       - "otros hábitos presentes" -> "Presentes". Si dicta descripción, asígnalo a "Describa (Otros hábitos)".
+       - "simetría facial" -> "Simétrico" o "Asimétrico".
        - "apertura bucal" -> "Aparentemente normal", "Con limitación", "Con desviación".
        - "ATM" -> "Aparentemente normal", "Con ruidos", "Con dolor".
        - "mordida abierta/cruzada/en tijera" -> asigna a sus campos correspondientes.
+     * Comandos de Modal de Lesiones (Imagen Interactiva):
+       - "abrir lesiones anterior/posterior", "editar lesiones anterior/posterior" -> "comando": "abrir_modal_lesiones", "destino": "anterior"|"posterior"
+       - "cerrar", "cerrar imagen interactiva" -> "comando": "cerrar_modal_lesiones"
+       - "eliminar tabla [región]" -> "comando": "eliminar_lesion", "region": "[región]"
+       - "seleccionar [región] lesión [tipo] comentario [texto]" -> "comando": "asignar_lesion", "region": "[región]", "lesion": "[tipo]", "comentario": "[texto]"
 
    - Facturación (Sección Factura):
      * "factura sí", "requiere factura sí", "selecciona factura sí", "factura no", "sin factura" -> asigna "Si" o "No" al campo "Va a requerir factura?".

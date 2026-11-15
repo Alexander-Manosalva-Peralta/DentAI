@@ -4,6 +4,7 @@
 function dentaiScan(anamnesisFields = []) {
   const MAX = 200;
   const clean = (s) => (s || "").replace(/\s+/g, " ").replace(/^[*:\s]+|[*:\s]+$/g, "").trim().slice(0, 120);
+  const esc = (s) => (typeof CSS !== "undefined" && CSS.escape) ? CSS.escape(s) : String(s || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 
   const visible = (el) => {
     try {
@@ -79,7 +80,7 @@ function dentaiScan(anamnesisFields = []) {
     if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
 
     if (el.id) {
-      const l = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+      const l = document.querySelector('label[for="' + esc(el.id) + '"]');
       if (l && textOf(l)) return textOf(l);
     }
 
@@ -260,8 +261,10 @@ function dentaiScan(anamnesisFields = []) {
 
   const out = [];
   const hcForm = document.getElementById("hc_form");
-  const isAnamnesis = hcForm && visible(hcForm) && Array.from(document.querySelectorAll("h4.text-c"))
+  const isAnamnesis = hcForm && visible(hcForm) && Array.from(document.querySelectorAll("h4.text-c, h4, h3, h2"))
     .some((h) => /^\s*(?:1\s*)?ANAMNESIS\s*$/i.test(h.textContent) && visible(h));
+  const isExamenClinico = Boolean(hcForm) && Array.from(document.querySelectorAll("h4.text-c, h4, h3, h2, .panel-title"))
+    .some((h) => /(?:2\s*)?EXAMEN\s+CL[IÍ]NICO/i.test(h.textContent));
   const anamnesisByName = new Map(isAnamnesis ? anamnesisFields.map((f) => [f.name, f]) : []);
   const seenRadio = new Set();
   const els = document.querySelectorAll("input, select, textarea, [contenteditable='true']");
@@ -274,8 +277,13 @@ function dentaiScan(anamnesisFields = []) {
     if (el.isContentEditable && tag !== "input" && tag !== "textarea") type = "richtext";
     if (["password", "hidden", "submit", "button", "reset", "image", "file"].includes(type)) continue;
     const anamnesisField = hcForm?.contains(el) ? anamnesisByName.get(el.name) : null;
-    // Los dos detalles condicionales deben poder proponerse antes de activar su selector.
-    if (el.disabled || el.readOnly || (!visible(el) && !anamnesisField?.dependsOn)) continue;
+    const isExamenConditional = isExamenClinico && (
+      /^(areg|ameg|aren|amen|areh|ameh|aumentada|disminuida):?$/i.test(labelFor(el) || el.name || "") ||
+      /describa/i.test(labelFor(el) || el.name || "")
+    );
+    const isImc = isExamenClinico && /imc/i.test(labelFor(el) || el.name || "");
+    // Los detalles condicionales e IMC deben poder proponerse antes de activar su selector.
+    if (el.disabled || (el.readOnly && !isImc) || (!visible(el) && !anamnesisField?.dependsOn && !isExamenConditional)) continue;
 
     let key, entry;
     el.setAttribute("data-dentai-id", "tmp");
@@ -317,6 +325,43 @@ function dentaiScan(anamnesisFields = []) {
       entry.contexto = "anamnesis";
       entry.pagina = location.href;
       entry.dependsOn = anamnesisField.dependsOn || "";
+    } else if (isExamenClinico) {
+      entry.contexto = "examen_clinico";
+      entry.pagina = location.href;
+      const lbl = labelFor(el) || "";
+      // Desambiguar los dos campos "Describa"
+      if (/describa/i.test(lbl)) {
+        let isResp = /respiraci[oó]n/i.test((el.name || "") + " " + (el.id || ""));
+        let isHab = /otros?\s*h[aá]bitos?/i.test((el.name || "") + " " + (el.id || ""));
+        if (!isResp && !isHab) {
+          let prev = el.closest("tr")?.previousElementSibling;
+          while (prev) {
+            const ptxt = prev.textContent || "";
+            if (/otros?\s+h[aá]bitos?/i.test(ptxt)) { isHab = true; break; }
+            if (/respiraci[oó]n/i.test(ptxt)) { isResp = true; break; }
+            prev = prev.previousElementSibling;
+          }
+        }
+        if (isResp || /respiraci[oó]n/i.test(entry.seccion)) {
+          entry.etiqueta = "Describa (Respiración)";
+          entry.dependsOn = "respiracion";
+        } else if (isHab || /otros?\s+h[aá]bitos?/i.test(entry.seccion)) {
+          entry.etiqueta = "Describa (Otros hábitos)";
+          entry.dependsOn = "otros_habitos";
+        }
+      }
+      // Desambiguar Temperatura (Piel y Anexos vs Funciones Vitales)
+      if (tag === "select" && /^temperatura$/i.test(lbl.trim())) {
+        entry.etiqueta = "Temperatura (Piel y Anexos)";
+      }
+      if (/^areg:?$/i.test(lbl)) { entry.etiqueta = "AREG:"; entry.dependsOn = "apreciacion_general"; }
+      if (/^ameg:?$/i.test(lbl)) { entry.etiqueta = "AMEG:"; entry.dependsOn = "apreciacion_general"; }
+      if (/^aren:?$/i.test(lbl)) { entry.etiqueta = "AREN:"; entry.dependsOn = "estado_nutricional"; }
+      if (/^amen:?$/i.test(lbl)) { entry.etiqueta = "AMEN:"; entry.dependsOn = "estado_nutricional"; }
+      if (/^areh:?$/i.test(lbl)) { entry.etiqueta = "AREH:"; entry.dependsOn = "estado_hidratacion"; }
+      if (/^ameh:?$/i.test(lbl)) { entry.etiqueta = "AMEH:"; entry.dependsOn = "estado_hidratacion"; }
+      if (/^aumentada:?$/i.test(lbl)) { entry.etiqueta = "Aumentada:"; entry.dependsOn = "temperatura_piel"; }
+      if (/^disminuida:?$/i.test(lbl)) { entry.etiqueta = "Disminuida:"; entry.dependsOn = "temperatura_piel"; }
     }
     entry.key = key;
     entry.name = el.name || "";
@@ -330,6 +375,7 @@ function dentaiScan(anamnesisFields = []) {
 
 function dentaiFill(items) {
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  const esc = (s) => (typeof CSS !== "undefined" && CSS.escape) ? CSS.escape(s) : String(s || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   const results = [];
   function visibleAnamnesis(el) {
     if (!el) return false;
@@ -373,7 +419,7 @@ function dentaiFill(items) {
   }
 
   function labelOf(el) {
-    const l = (el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]')) || el.closest("label");
+    const l = (el.id && document.querySelector('label[for="' + esc(el.id) + '"]')) || el.closest("label");
     return (l ? l.textContent : "") + " " + (el.value || "");
   }
 
@@ -386,7 +432,7 @@ function dentaiFill(items) {
       }
       if (it.key && it.key.startsWith("g:")) {
         const g = it.key.slice(2);
-        const radios = Array.from(document.querySelectorAll('input[type=radio][data-dentai-group="' + CSS.escape(g) + '"]'));
+        const radios = Array.from(document.querySelectorAll('input[type=radio][data-dentai-group="' + esc(g) + '"]'));
         if (!radios.length) { results.push({ key: it.key, ok: false, motivo: "grupo no encontrado" }); continue; }
         const v = norm(it.valor);
         let hit = radios.find((r) => norm(labelOf(r)).includes(v) || norm(r.value) === v);
@@ -417,12 +463,12 @@ function dentaiFill(items) {
 
       // 1. Buscar por clave data-dentai-key
       let el = it.contexto === "anamnesis"
-        ? document.querySelector('#hc_form [name="' + CSS.escape(it.name) + '"]')
-        : it.key ? document.querySelector('[data-dentai-key="' + CSS.escape(it.key) + '"]') : null;
+        ? document.querySelector('#hc_form [name="' + esc(it.name) + '"]')
+        : it.key ? document.querySelector('[data-dentai-key="' + esc(it.key) + '"]') : null;
 
       // 2. Fallback por domId o name
       if (!el && it.contexto !== "anamnesis" && it.domId) el = document.getElementById(it.domId);
-      if (!el && it.contexto !== "anamnesis" && it.name) el = document.querySelector(`[name="${CSS.escape(it.name)}"]`);
+      if (!el && it.contexto !== "anamnesis" && it.name) el = document.querySelector(`[name="${esc(it.name)}"]`);
 
       // 3. Fallback por etiqueta aproximada
       if (!el && it.contexto !== "anamnesis" && it.etiqueta) {
@@ -444,7 +490,7 @@ function dentaiFill(items) {
       const tag = el.tagName.toLowerCase();
       if (it.contexto === "anamnesis") {
         const hidden = !visibleAnamnesis(tag === "select" ? el.parentElement : el);
-        const dependency = it.dependsOn && document.querySelector('#hc_form [name="' + CSS.escape(it.dependsOn) + '"]');
+        const dependency = it.dependsOn && document.querySelector('#hc_form [name="' + esc(it.dependsOn) + '"]');
         if (el.disabled || el.readOnly || hidden || (it.dependsOn && norm(dependency?.value) !== "aplica")) {
           results.push({ key: it.key, ok: false, motivo: "El campo está oculto o bloqueado. Activa su opción Aplica y verifica que sea editable." });
           continue;
@@ -556,7 +602,6 @@ function dentaiFill(items) {
         const want = /^(true|si|sí|1|marcado)$/i.test(String(it.valor).trim());
         if (el.checked !== want) {
           el.checked = want;
-          el.click();
           if (el.parentElement && el.parentElement.classList.contains("icheckbox")) {
             el.parentElement.click();
           }
@@ -1611,6 +1656,126 @@ function dentaiOpenRegistroClinico(target) {
   } catch (err) {
     return { ok: false, motivo: err.message };
   }
+}
+
+/* ---------- Manejador de la Imagen Interactiva de Lesiones (Smile UPCH) ---------- */
+function dentaiHandleInteractiveLesion(cmd) {
+  if (!cmd || !cmd.action) return { ok: false };
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+  // 1. Abrir modal interactivo pulsando el botón "Editar" de Lesiones Anterior o Posterior
+  if (cmd.action === "abrir_modal_lesiones") {
+    const isPost = cmd.target === "posterior";
+    const selects = Array.from(document.querySelectorAll("select"));
+    const hitSelect = selects.find((s) => {
+      const pText = norm((s.closest("tr, td, .form-group, .row") || {}).textContent || "");
+      return isPost ? pText.includes("lesiones posterior") : pText.includes("lesiones anterior");
+    });
+    if (hitSelect) {
+      const container = hitSelect.closest("tr, table, .card, tbody") || hitSelect.parentElement;
+      const editBtn = Array.from(container.querySelectorAll("button, a, input[type=button]"))
+        .find((b) => norm(b.textContent || b.value).includes("editar"));
+      if (editBtn) {
+        editBtn.click();
+        return { ok: true, msg: "Modal interactivo abierto." };
+      }
+    }
+    const anyEdit = Array.from(document.querySelectorAll("button, a, .btn"))
+      .find((b) => norm(b.textContent || b.value).includes("editar") && b.getBoundingClientRect().height > 0);
+    if (anyEdit) { anyEdit.click(); return { ok: true, msg: "Modal interactivo abierto." }; }
+    return { ok: false, motivo: "Botón Editar de lesiones no encontrado en el formulario." };
+  }
+
+  // 2. Cerrar modal interactivo pulsando "Cerrar" o la "X"
+  if (cmd.action === "cerrar_modal_lesiones") {
+    const closeBtns = Array.from(document.querySelectorAll(".modal button, .modal a, .dialog button, button, a"))
+      .filter((b) => {
+        const t = norm(b.textContent || b.value || b.getAttribute("aria-label") || "");
+        return t === "cerrar" || t === "close" || b.classList.contains("close") || t === "x" || b.getAttribute("data-dismiss") === "modal";
+      });
+    const visibleBtn = closeBtns.find((b) => {
+      const r = b.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    if (visibleBtn) {
+      visibleBtn.click();
+      return { ok: true, msg: "Modal interactivo cerrado." };
+    }
+    return { ok: false, motivo: "Botón Cerrar no encontrado en el modal." };
+  }
+
+  // 3. Eliminar tarjeta de lesión por región
+  if (cmd.action === "eliminar_lesion") {
+    const targetReg = norm(cmd.region);
+    const modal = document.querySelector(".modal, .dialog, div[role=dialog]") || document.body;
+    const cards = Array.from(modal.querySelectorAll(".card, table, tr, div"))
+      .filter((d) => {
+        const inputs = Array.from(d.querySelectorAll("input"));
+        return inputs.some((inp) => norm(inp.value).includes(targetReg));
+      });
+    for (const card of cards) {
+      const delBtn = Array.from(card.querySelectorAll("button, a, span, .btn"))
+        .find((el) => norm(el.textContent).includes("eliminar"));
+      if (delBtn) {
+        delBtn.click();
+        return { ok: true, msg: `Lesión en ${cmd.region} eliminada.` };
+      }
+    }
+    return { ok: false, motivo: `No se encontró la tabla de lesión para "${cmd.region}".` };
+  }
+
+  // 4. Asignar lesión en región anatómica
+  if (cmd.action === "asignar_lesion") {
+    const targetReg = norm(cmd.region);
+    const modal = document.querySelector(".modal, .dialog, div[role=dialog]") || document.body;
+
+    // Buscar punto interactivo en la imagen anatómica
+    const candidates = Array.from(modal.querySelectorAll("area, svg *, div, span, a, [data-region]"))
+      .filter((el) => {
+        const t = norm(el.textContent || el.getAttribute("alt") || el.getAttribute("title") || el.getAttribute("data-region") || "");
+        return t === targetReg || t.includes(targetReg);
+      });
+    if (candidates.length > 0) {
+      candidates[0].click();
+      candidates[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      candidates[0].dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    }
+
+    setTimeout(() => {
+      const cards = Array.from(modal.querySelectorAll("div, table, .card"))
+        .filter((d) => {
+          const inputs = Array.from(d.querySelectorAll("input"));
+          return inputs.some((inp) => norm(inp.value).includes(targetReg)) || d.querySelector("select");
+        });
+      const card = cards[cards.length - 1];
+      if (card) {
+        if (cmd.lesion) {
+          const select = card.querySelector("select");
+          if (select) {
+            const lesNorm = norm(cmd.lesion);
+            const opt = Array.from(select.options).find((o) => norm(o.text || o.value).includes(lesNorm));
+            if (opt) {
+              select.value = opt.value;
+              select.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+          }
+        }
+        if (cmd.comentario) {
+          const commentInput = Array.from(card.querySelectorAll("input:not([readonly]), textarea"))
+            .find((inp) => !inp.value || norm(inp.value) !== targetReg);
+          if (commentInput) {
+            commentInput.value = cmd.comentario;
+            commentInput.dispatchEvent(new Event("input", { bubbles: true }));
+            commentInput.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+      }
+    }, 150);
+
+    return { ok: true, region: cmd.region, lesion: cmd.lesion };
+  }
+
+  return { ok: false };
 }
 
 /* ---------- Detector Automático de Cambios de Vista en Smile (AJAX Observer) ---------- */
