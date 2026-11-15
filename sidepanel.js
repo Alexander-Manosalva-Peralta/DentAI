@@ -736,7 +736,7 @@ async function processText(rawText) {
   // ANTI-ECO INTELIGENTE: Solo ignorar si el texto coincide con lo que el asistente pronuncia
   if (state.isSpeakingTTS && state.speakingText) {
     const cleanNorm = (rawText || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, "").trim();
-    if (cleanNorm === state.speakingText || state.speakingText.includes(cleanNorm)) {
+    if (cleanNorm === state.speakingText || (cleanNorm.length >= 12 && cleanNorm.split(/\s+/).length >= 3 && state.speakingText.includes(cleanNorm))) {
       return;
     }
   }
@@ -761,6 +761,7 @@ async function processText(rawText) {
   const anamnesis = proposeAnamnesis(text, state.fields, state.anamnesisAwaiting, state.anamnesisSelection, state.pending);
   if (anamnesis.handled) {
     const context = state.fields.find((f) => f.contexto === "anamnesis");
+    if (anamnesis.selection?.kind === "question" && anamnesis.selection.number !== state.anamnesisSelection?.number && $("result")) $("result").innerHTML = "";
     if (anamnesis.selection) state.anamnesisSelection = { ...anamnesis.selection, pagina: context.pagina, frameId: context.frameId, expiresAt: Date.now() + 120000 };
     if (anamnesis.action) {
       state.anamnesisAwaiting = null;
@@ -946,7 +947,7 @@ async function processText(rawText) {
     const timeSinceSpeech = Date.now() - (state.lastSpeechTime || 0);
     if (timeSinceSpeech < 2500) {
       const cleanNorm = normRaw.replace(/[^a-z0-9\s]/g, "").trim();
-      if (cleanNorm === state.speakingText || state.speakingText.includes(cleanNorm)) {
+      if (cleanNorm === state.speakingText || (cleanNorm.length >= 12 && cleanNorm.split(/\s+/).length >= 3 && state.speakingText.includes(cleanNorm))) {
         console.log("Anti-echo: Descartado eco del asistente ->", normRaw);
         return;
       }
@@ -2091,6 +2092,13 @@ function renderPending() {
       : "Esperando dictado (ej: “DNI 72 73 62 89”, “fecha de nacimiento 22 02 2006”)…";
   } else {
     box.className = "";
+    const selected = state.anamnesisAwaiting || (state.anamnesisSelection?.kind === "question" ? state.anamnesisSelection : null);
+    if (selected) {
+      const hint = document.createElement("div");
+      hint.className = "item";
+      hint.textContent = `${selected.label} seleccionado. ${selected.prompt || "Dicta el valor."}`;
+      box.appendChild(hint);
+    }
   }
 
   for (const [id, v] of state.pending) {

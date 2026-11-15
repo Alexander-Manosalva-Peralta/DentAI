@@ -7,13 +7,14 @@ function dentaiScan(anamnesisFields = []) {
 
   const visible = (el) => {
     try {
-      // 1. Descartar elementos dentro de pestañas inactivas o contenedores ocultos de Smile
-      if (el.closest(".tab-pane:not(.active), [style*='display: none'], [style*='display:none']")) {
-        return false;
-      }
-
       const tag = el.tagName.toLowerCase();
       const type = (el.type || "").toLowerCase();
+      const styledControl = tag === "select" || type === "checkbox" || type === "radio";
+      // 1. Descartar elementos dentro de pestañas inactivas o contenedores ocultos de Smile
+      // El input nativo puede estar oculto por el estilo; su contenedor debe seguir visible.
+      if ((styledControl ? el.parentElement : el)?.closest(".tab-pane:not(.active), [style*='display: none'], [style*='display:none']")) {
+        return false;
+      }
 
       // 2. Selects (nativos, Select2 o estilizados de Smile)
       if (tag === "select") {
@@ -497,12 +498,17 @@ function dentaiFill(items) {
       }
 
       const tag = el.tagName.toLowerCase();
+      const isChoice = el.type === "checkbox" || el.type === "radio";
+      const choiceWrapper = isChoice ? el.closest("[class*='icheckbox'], [class*='iradio']") : null;
+      const choiceLabel = isChoice && el.id ? anamnesisRoot?.querySelector('label[for="' + CSS.escape(el.id) + '"]') : null;
+      const choiceSurface = choiceWrapper || choiceLabel || (isChoice ? el.parentElement : null);
       if (it.contexto === "anamnesis") {
-        const hidden = !visibleAnamnesis(tag === "select" ? el.parentElement : el);
+        const hidden = !visibleAnamnesis(isChoice ? choiceSurface : tag === "select" ? el.parentElement : el);
         const dependency = it.dependsOn && (it.dependsOnId ? document.getElementById(it.dependsOnId)
           : document.querySelector('#hc_form [name="' + CSS.escape(it.dependsOn) + '"]:not([type="hidden"])'));
         const dependencyReady = !it.dependsOn || (it.dependsChecked ? dependency?.checked : norm(dependency?.value) === norm(it.dependsValue || "Aplica"));
-        if (el.type === "hidden" || el.disabled || el.readOnly || hidden || !dependencyReady || (it.optionValue && el.value !== it.optionValue)) {
+        const disabled = el.disabled || el.matches(":disabled") || choiceWrapper?.classList.contains("disabled") || choiceSurface?.getAttribute("aria-disabled") === "true";
+        if (el.type === "hidden" || disabled || el.readOnly || hidden || !dependencyReady || (it.optionValue && el.value !== it.optionValue)) {
           results.push({ key: it.key, ok: false, motivo: "El campo está oculto o bloqueado. Activa primero su opción correspondiente y verifica que sea editable." });
           continue;
         }
@@ -612,14 +618,18 @@ function dentaiFill(items) {
       } else if (el.type === "checkbox" || el.type === "radio") {
         const want = /^(true|si|sí|1|marcado)$/i.test(String(it.valor).trim());
         if (it.contexto === "anamnesis") {
-          // El clic nativo ya alterna el estado. No asignarlo antes ni hacer clic también en el padre.
-          if (el.checked !== want) el.click();
+          // Smile muestra una etiqueta azul o un contenedor iCheck y puede ocultar el input.
+          if (el.checked !== want) {
+            const surface = choiceWrapper?.querySelector(".iCheck-helper") || choiceWrapper || choiceLabel || el;
+            surface.click();
+            if (el.checked !== want && surface !== el) el.click();
+          }
           try {
             const jq = window.jQuery || window.$;
             if (typeof jq === "function" && typeof jq(el).iCheck === "function") jq(el).iCheck(want ? "check" : "uncheck");
           } catch (e) {}
           fire(el);
-          mark(el);
+          mark(choiceSurface || el);
           results.push({ key: it.key, ok: el.checked === want, motivo: el.checked === want ? "" : "No se pudo cambiar la opción." });
           continue;
         }

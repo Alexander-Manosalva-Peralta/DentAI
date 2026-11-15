@@ -85,6 +85,16 @@ function anamnesisQuantity(value) {
   return number >= 1 && number <= 31 ? String(number) : null;
 }
 
+function anamnesisQuestionShortcut(text) {
+  const value = normalizeAnamnesis(text).replace(/[.,;:!?]+$/, "").trim()
+    .replace(/^(?:(?:pregunta|numero|opcion)(?:\s+numero)?\s*|(?:la|el)\s+)/, "");
+  const parts = value.split(/[\s,;:.!?]+/).filter(Boolean);
+  if (!parts.length) return null;
+  const numbers = parts.map((part) => Number(anamnesisQuantity(part)));
+  const number = numbers[0];
+  return number >= 1 && number <= 16 && numbers.every((n) => n === number) ? number : null;
+}
+
 // Los textos libres se conservan completos, incluso si contienen otros nombres de campo.
 function parseAnamnesisActual(text) {
   let command = String(text || "").normalize("NFC").replace(/\s+/g, " ").trim();
@@ -117,6 +127,7 @@ function parseAnamnesisActual(text) {
   result.target = {
     prefix: command.slice(0, hit.match[0].length).trim().replace(/[:=]$/, "").trim(),
     literal: ["motivo", "vacuna", "visitNote", "durationNote", "sintomas", "relato"].includes(hit.kind),
+    numeric: hit.kind === "visit" || hit.kind === "duration",
     label: { motivo: "Motivo de consulta", vacuna: "Informe de vacuna", visitNote: "Observación de última visita", durationNote: "Observación del tiempo de enfermedad", visit: "Última visita odontológica", duration: "Tiempo de enfermedad", inicio: "Inicio", curso: "Curso", sintomas: "Signos y síntomas principales", relato: "Relato" }[hit.kind],
   };
   if (!value) { result.awaiting = result.target; return result; }
@@ -271,7 +282,7 @@ function parseAnamnesisSections(text, selection, fields, pending, allowNumber = 
   }
 
   const numberWord = "(?:\\d+|uno|una|un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis)";
-  const questionMatch = norm.match(new RegExp(`^(?:(?:pregunta|numero|cuestionario)(?:\\s+numero)?\\s+)?(${numberWord})\\b\\s*[.:=]?\\s*(.*)$`));
+  const questionMatch = norm.match(new RegExp(`^(?:(?:pregunta|numero|cuestionario)(?:\\s+numero)?\\s*)?(${numberWord})\\b\\s*[,;.:=]?\\s*(.*)$`));
   const explicitQuestion = /^(?:pregunta|numero|cuestionario)\b/.test(norm);
   if (questionMatch && (allowNumber || explicitQuestion)) {
     const number = Number(anamnesisQuantity(questionMatch[1]));
@@ -327,10 +338,10 @@ function parseAnamnesisSections(text, selection, fields, pending, allowNumber = 
     if (!child) { result.errors.push("Indica sí o no, o un dato como cantidad, tiempo, parejas, comentario o tipo."); return result; }
     const childLabel = normalizeAnamnesis(child[1]);
     const role = /parejas/.test(childLabel) ? "partners" : /comentario|descripcion/.test(childLabel) ? "comment" : /^(?:tiempo|cuanto)/.test(childLabel) ? "duration" : /^(?:frecuencia|periodicidad)/.test(childLabel) ? "period" : childLabel === "tipo" ? "type" : "quantity";
-    result.target = { ...target, prefix: `${habit.key} ${child[1]}`, label: `${habit.key} · ${child[1]}`, literal: role === "comment" || role === "type" };
+    result.target = { ...target, prefix: `${habit.key} ${child[1]}`, label: `${habit.key} · ${child[1]}`, literal: role === "comment" || role === "type", numeric: ["partners", "quantity", "duration"].includes(role) };
     if (!habit[role]) { result.errors.push(`Ese dato no está disponible para ${habit.key}.`); return result; }
     const value = cleanBody(child[2]);
-    if (!value) return wait(result, { ...target, prefix: `${habit.key} ${child[1]}`, label: `${habit.key} · ${child[1]}`, literal: role === "comment" || role === "type" });
+    if (!value) return wait(result, result.target);
     add(result, anamnesisName(habit.row, 4), "Si");
     if (role === "comment" || role === "type") add(result, anamnesisName(habit[role], 4, 0), value);
     else if (role === "partners") {
@@ -401,12 +412,14 @@ function proposeAnamnesis(text, fields, awaiting = null, selection = null, pendi
   const valid = (context) => context && context.expiresAt > Date.now() && active.some((f) => f.pagina === context.pagina && f.frameId === context.frameId);
   if (!valid(awaiting)) awaiting = null;
   if (!valid(selection)) selection = null;
+  const shortcut = anamnesisQuestionShortcut(text);
+  if (shortcut !== null && !awaiting?.literal && !awaiting?.numeric) text = `pregunta ${shortcut}`;
   const parse = (input, allowNumber = true, useSelection = true) => {
     const actual = parseAnamnesisActual(input);
     if (actual.handled) { actual.selection = { ...actual.target, kind: "actual" }; return actual; }
     return parseAnamnesisSections(input, useSelection ? selection : null, active, pending, allowNumber);
   };
-  let result = parse(text, !awaiting || (awaiting.kind === "question" && !awaiting.literal), !awaiting?.literal);
+  let result = parse(text, !awaiting || (!awaiting.literal && !awaiting.numeric), !awaiting?.literal);
   if (awaiting?.literal && result.target?.kind === "none") result = { handled: false };
   if (!result.handled && awaiting) {
     const control = /^(?:confirmar|confirmado|aplicar|aplicalo|descartar|descartalo|cancelar|cancelalo|guardar|grabar|limpiar|buscar|busca|actualiza|actualizar|refresca|refrescar|escanear|escanea|modo|pausa|pausar|detener|continuar|sube|subir|baja|bajar|arriba|abajo|agenda|servicio|preregistro|ve\s+a|ir\s+a|abre|abrir|cambia|cambiar|corrige|modifica|selecciona|dni|documento|nombre|apellido)\b/;
