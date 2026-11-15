@@ -798,8 +798,11 @@ async function processText(rawText) {
   const rawTrimmed = (rawText || "").trim();
   if (!rawTrimmed || JUNK.test(rawTrimmed)) return;
 
-  // Limpiar prefijo opcional de invocación si el doctor lo usó
-  let text = rawTrimmed.replace(/^(?:dentai|doctor|asistente)[,\s]*/i, "").trim();
+  // Limpiar prefijo opcional de invocación y muletillas si el doctor lo usó
+  let text = rawTrimmed
+    .replace(/^(?:dentai|doctor|asistente)[,\s]*/i, "")
+    .replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/i, "")
+    .trim();
   if (!text) return;
   if (typeof normalizeClinicalAcronyms === "function") {
     text = normalizeClinicalAcronyms(text);

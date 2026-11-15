@@ -297,3 +297,50 @@ test("cambiar y editar observaciones condicionales directamente", (t) => {
   assert.equal(pLesion.handled, true);
   assert.equal(pLesion.interactiveCommand.action, "abrir_modal_lesiones");
 });
+
+test("dictado continuo rápido y fonética de voz (amej, ameja, areja, a reja, are, listo)", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "apreciación general amej" -> AMEG
+  const pAmej = s.propose("apreciación general amej");
+  assert.equal(pAmej.handled, true);
+  assert.equal(pAmej.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AMEG");
+
+  // "apreciación general ameja" -> AMEG
+  const pAmeja = s.propose("apreciación general ameja");
+  assert.equal(pAmeja.handled, true);
+  assert.equal(pAmeja.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AMEG");
+
+  // "apreciación general areja" -> AREG
+  const pAreja = s.propose("apreciación general areja");
+  assert.equal(pAreja.handled, true);
+  assert.equal(pAreja.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+
+  // "apreciación general a reja" -> AREG
+  const pAReja = s.propose("apreciación general a reja");
+  assert.equal(pAReja.handled, true);
+  assert.equal(pAReja.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+
+  // "apreciación general are" -> AREG
+  const pAre = s.propose("apreciación general are");
+  assert.equal(pAre.handled, true);
+  assert.equal(pAre.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+
+  // "listo apreciación general a re" -> AREG (tolera muletilla 'listo' y truncado 'a re')
+  const pListoAre = s.propose("listo apreciación general a re");
+  assert.equal(pListoAre.handled, true);
+  assert.equal(pListoAre.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+
+  // "apreciación general AREG"
+  const pAreg = s.propose("apreciación general AREG");
+  assert.equal(pAreg.handled, true);
+  assert.equal(pAreg.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+
+  // "apreciación general ABEG"
+  const pAbeg = s.propose("apreciación general ABEG");
+  assert.equal(pAbeg.handled, true);
+  assert.equal(pAbeg.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "ABEG");
+
+  // Normalizador a nivel de función para 'listo confirmar'
+  assert.equal(s.w.normalizeClinicalAcronyms("listo confirmar"), "confirmar");
+});
