@@ -233,3 +233,67 @@ test("llenado completo en DOM simulado con dentaiFill", (t) => {
   assert.equal(s.w.document.querySelector('[name="peso_kg"]').value, "80");
   assert.equal(s.w.document.querySelector('[name="talla_m"]').value, "1.40");
 });
+
+test("variaciones fonéticas de siglas (ARG, abeja, a MEG, a REM, a meh h)", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // ARG -> AREG
+  const pArg = s.propose("ARG");
+  assert.equal(pArg.handled, true);
+  assert.equal(pArg.entries.find((e) => e.field.etiqueta.includes("General")).valor, "AREG");
+
+  // abeja -> ABEG
+  const pAbeja = s.propose("abeja");
+  assert.equal(pAbeja.handled, true);
+  assert.equal(pAbeja.entries.find((e) => e.field.etiqueta.includes("General")).valor, "ABEG");
+
+  // a MEG -> AMEG
+  const pAmeg = s.propose("a MEG");
+  assert.equal(pAmeg.handled, true);
+  assert.equal(pAmeg.entries.find((e) => e.field.etiqueta.includes("General")).valor, "AMEG");
+
+  // estado nutricional a REM -> AREN
+  const pArem = s.propose("estado nutricional a REM");
+  assert.equal(pArem.handled, true);
+  assert.equal(pArem.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "AREN");
+
+  // a meh h -> AMEH
+  const pAmeh = s.propose("a meh h");
+  assert.equal(pAmeh.handled, true);
+  assert.equal(pAmeh.entries.find((e) => e.field.etiqueta.includes("Hidratación")).valor, "AMEH");
+});
+
+test("cambiar y editar observaciones condicionales directamente", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "cambiar AREG calidez neutral"
+  const pCambiar = s.propose("cambiar AREG calidez neutral");
+  assert.equal(pCambiar.handled, true);
+  assert.equal(pCambiar.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+  assert.equal(pCambiar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "calidez neutral");
+
+  // "editar AREG calidez neutral"
+  const pEditar = s.propose("editar AREG calidez neutral");
+  assert.equal(pEditar.handled, true);
+  assert.equal(pEditar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "calidez neutral");
+
+  // "cambiar AREN baja de peso progresiva"
+  const pAren = s.propose("cambiar AREN baja de peso progresiva");
+  assert.equal(pAren.handled, true);
+  assert.equal(pAren.entries.find((e) => e.field.etiqueta === "AREN:").valor, "baja de peso progresiva");
+
+  // "editar AMEH mucosas deshidratadas"
+  const pAmeh = s.propose("editar AMEH mucosas deshidratadas");
+  assert.equal(pAmeh.handled, true);
+  assert.equal(pAmeh.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "mucosas deshidratadas");
+
+  // "cambiar AREG a ABEG"
+  const pSwap = s.propose("cambiar AREG a ABEG");
+  assert.equal(pSwap.handled, true);
+  assert.equal(pSwap.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "ABEG");
+
+  // "tipo de lesión editar" abre modal de lesiones
+  const pLesion = s.propose("tipo de lesión editar");
+  assert.equal(pLesion.handled, true);
+  assert.equal(pLesion.interactiveCommand.action, "abrir_modal_lesiones");
+});

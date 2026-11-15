@@ -755,12 +755,16 @@ function dentaiNavigate(target) {
   }
 
   if (/modificar|editar/i.test(targetClean)) {
+    const isExamen = Array.from(document.querySelectorAll("h4.text-c, h4, h3, h2, .panel-title"))
+      .some((h) => /(?:2\s*)?EXAMEN\s+CL[IÍ]NICO/i.test(h.textContent));
+    const isLesionBtn = (el) => el && (el.id === "btn_editar_lesion_ant" || /lesion/i.test(el.id || "") || el.closest("#renglon_lesiones_ant_btn"));
+
     const btnMod = document.getElementById("btn_modificar") ||
-      document.getElementById("btn_editar") ||
+      (!isExamen ? document.getElementById("btn_editar") : null) ||
       document.getElementById("modificar") ||
       document.querySelector("button[name='modificar'], input[name='modificar'], [name*='modificar']") ||
-      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a.btn, a")).find((b) => visible(b) && /^\s*modificar\s*$/i.test(norm(b.textContent || b.value))) ||
-      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a")).find((b) => visible(b) && /modificar|editar/i.test(norm(b.textContent || b.value)));
+      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a.btn, a")).find((b) => visible(b) && !isLesionBtn(b) && /^\s*modificar\s*$/i.test(norm(b.textContent || b.value))) ||
+      Array.from(document.querySelectorAll("button, .btn, input[type='button'], input[type='submit'], a")).find((b) => visible(b) && !isLesionBtn(b) && /modificar|editar/i.test(norm(b.textContent || b.value)));
 
     if (btnMod) {
       btnMod.scrollIntoView({ block: "center", behavior: "smooth" });

@@ -19,18 +19,63 @@ const TIPOS_LESIONES_INTERACTIVAS = [
   "ÚLCERA SUPERFICIAL", "VESÍCULA"
 ];
 
+// Normalizador fonético y de variantes de reconocimiento de voz para siglas clínicas (NLP Manos Libres)
+function normalizeClinicalAcronyms(text) {
+  if (!text) return "";
+  let t = text;
+
+  // 1. ABEH / AREH / AMEH (tolerancia a 'hache', 'h' final, letras separadas y espacios)
+  t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh)\b/gi, "AMEH");
+  t = t.replace(/\b(?:a\s+reh\s+h(?:ache)?|areh\s+h(?:ache)?|are\s+hache|a\s+re\s+h|a\s+r\s+e\s+h|a\s+reh|areh|ar\s+eh|a\s+r\s+h|arh|a\s+red\s+h)\b/gi, "AREH");
+  t = t.replace(/\b(?:a\s+beh\s+h(?:ache)?|abeh\s+h(?:ache)?|abe\s+hache|a\s+be\s+h|a\s+b\s+e\s+h|a\s+beh|abeh|ab\s+eh|a\s+b\s+h|abh)\b/gi, "ABEH");
+
+  // 2. ABEG / AREG / AMEG (tolerancia a 'abeja', 'aveja', 'arg', 'a meg', etc.)
+  t = t.replace(/\b(?:abeg|abg|abeja|aveja|a\s+beg|a\s+veg|aveg|a\s+b\s+e\s+g|ab\s+eg)\b/gi, "ABEG");
+  t = t.replace(/\b(?:areg|arg|a\s+reg|a\s+r\s+e\s+g|ar\s+eg|a\s+rek|a\s+red|a\s+rec|a\s+rex)\b/gi, "AREG");
+  t = t.replace(/\b(?:ameg|a\s+meg|a\s+mek|a\s+m\s+e\s+g|am\s+eg|a\s+med|amec|amig)\b/gi, "AMEG");
+
+  // 3. ABEN / AREN / AMEN (tolerancia a 'a rem', 'amén', 'a ven', etc.)
+  t = t.replace(/\b(?:aben|a\s+ben|a\s+ven|aven|a\s+b\s+e\s+n|ab\s+en|ab\s+n)\b/gi, "ABEN");
+  t = t.replace(/\b(?:aren|a\s+rem|arem|a\s+ren|a\s+r\s+e\s+n|ar\s+en|ar\s+n)\b/gi, "AREN");
+  t = t.replace(/\b(?:amen|am[eé]n|a\s+men|a\s+m\s+e\s+n|am\s+en|am\s+n)\b/gi, "AMEN");
+
+  // Casos fonéticos truncados precedidos de contexto clínico:
+  t = t.replace(/\b(?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+(?:ab|a\s+b)\b/gi, "estado nutricional ABEN");
+  t = t.replace(/\b(?:(?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:ab|a\s+b)\b/gi, "apreciación general ABEG");
+
+  return t;
+}
+
 // 1. Extraer Ectoscopia
 function extractEctoscopia(text) {
   if (!text) return {};
-  const norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const cleanedText = normalizeClinicalAcronyms(text);
+  const norm = cleanedText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const res = {};
 
+  // Cambios directos de selector (ej: "cambiar AREG a ABEG", "cambiar a AMEG")
+  const mSelectGen = cleanedText.match(/\bcambiar\s+(?:AREG|AMEG|ABEG)\s+a\s+(ABEG|AREG|AMEG)\b|\bcambiar\s+a\s+(ABEG|AREG|AMEG)\b/i);
+  if (mSelectGen) {
+    res.apreciacionGeneral = (mSelectGen[1] || mSelectGen[2]).toUpperCase();
+    return res;
+  }
+  const mSelectNut = cleanedText.match(/\bcambiar\s+(?:AREN|AMEN|ABEN)\s+a\s+(ABEN|AREN|AMEN)\b|\bcambiar\s+a\s+(ABEN|AREN|AMEN)\b/i);
+  if (mSelectNut) {
+    res.estadoNutricional = (mSelectNut[1] || mSelectNut[2]).toUpperCase();
+    return res;
+  }
+  const mSelectHid = cleanedText.match(/\bcambiar\s+(?:AREH|AMEH|ABEH)\s+a\s+(ABEH|AREH|AMEH)\b|\bcambiar\s+a\s+(ABEH|AREH|AMEH)\b/i);
+  if (mSelectHid) {
+    res.estadoHidratacion = (mSelectHid[1] || mSelectHid[2]).toUpperCase();
+    return res;
+  }
+
   // Apreciación General + Observación condicional (AREG / AMEG)
-  if (/\b(?:abeg|buen\s+estado\s+general|aparente\s+buen\s+estado)\b/i.test(norm)) {
+  if (/\b(?:abeg|buen\s+estado\s+general|aparente\s+buen\s+estado)\b/i.test(norm) && !/\bareg|ameg\b/i.test(norm)) {
     res.apreciacionGeneral = "ABEG";
-  } else if (/\b(?:areg|regular\s+estado\s+general)\b/i.test(norm)) {
+  } else if (/\bareg\b/i.test(norm) || /\bregular\s+estado\s+general\b/i.test(norm)) {
     res.apreciacionGeneral = "AREG";
-    const mObs = text.match(/(?:areg|regular\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|hidrataci[oó]n|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areg|areg|regular\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "");
@@ -38,10 +83,12 @@ function extractEctoscopia(text) {
         obs = obs.replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       }
       if (obs.length > 2) res.obsApreciacionGeneral = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areg\b/i.test(norm)) {
+      res.focusObservation = "AREG:";
     }
-  } else if (/\b(?:ameg|mal\s+estado\s+general)\b/i.test(norm)) {
+  } else if (/\bameg\b/i.test(norm) || /\bmal\s+estado\s+general\b/i.test(norm)) {
     res.apreciacionGeneral = "AMEG";
-    const mObs = text.match(/(?:ameg|mal\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|hidrataci[oó]n|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameg|ameg|mal\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "");
@@ -49,44 +96,62 @@ function extractEctoscopia(text) {
         obs = obs.replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       }
       if (obs.length > 2) res.obsApreciacionGeneral = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameg\b/i.test(norm)) {
+      res.focusObservation = "AMEG:";
     }
   }
 
   // Estado Nutricional + Observación condicional (AREN / AMEN)
-  if (/\b(?:aben|buen\s+estado\s+nutricional|nutrici[oó]n\s+buena|buena\s+nutrici[oó]n)\b/i.test(norm)) {
+  if (/\b(?:aben|buen\s+estado\s+nutricional|nutrici[oó]n\s+buena|buena\s+nutrici[oó]n)\b/i.test(norm) && !/\baren|amen\b/i.test(norm)) {
     res.estadoNutricional = "ABEN";
-  } else if (/\b(?:aren|regular\s+nutrici[oó]n|nutrici[oó]n\s+regular|regular\s+estado\s+nutricional)\b/i.test(norm)) {
+  } else if (/\baren\b/i.test(norm) || /\bregular\s+nutrici[oó]n|regular\s+estado\s+nutricional\b/i.test(norm)) {
     res.estadoNutricional = "AREN";
-    const mObs = text.match(/(?:aren|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?aren|aren|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      let obs = mObs[1].trim().replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
+      let obs = mObs[1].trim()
+        .replace(/^(?:(?:estado\s+nutricional|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional|aren|amen)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       if (obs.length > 2) res.obsEstadoNutricional = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?aren\b/i.test(norm)) {
+      res.focusObservation = "AREN:";
     }
-  } else if (/\b(?:amen|mal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n)\b/i.test(norm)) {
+  } else if (/\bamen\b/i.test(norm) || /\bmal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n\b/i.test(norm)) {
     res.estadoNutricional = "AMEN";
-    const mObs = text.match(/(?:amen|mal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?amen|amen|mal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      let obs = mObs[1].trim().replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
+      let obs = mObs[1].trim()
+        .replace(/^(?:(?:estado\s+nutricional|mal\s+estado\s+nutricional|desnutrici[oó]n|aren|amen)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       if (obs.length > 2) res.obsEstadoNutricional = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?amen\b/i.test(norm)) {
+      res.focusObservation = "AMEN:";
     }
   }
 
   // Estado de Hidratación + Observación condicional (AREH / AMEH)
-  if (/\b(?:abeh|buena\s+hidrataci[oó]n|hidratado|bien\s+hidratado|buen\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm)) {
+  if (/\b(?:abeh|buena\s+hidrataci[oó]n|hidratado|bien\s+hidratado|buen\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm) && !/\bareh|ameh\b/i.test(norm)) {
     res.estadoHidratacion = "ABEH";
-  } else if (/\b(?:areh|regular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm)) {
+  } else if (/\bareh\b/i.test(norm) || /\bregular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n\b/i.test(norm)) {
     res.estadoHidratacion = "AREH";
-    const mObs = text.match(/(?:areh|regular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areh|areh|regular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      let obs = mObs[1].trim().replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
+      let obs = mObs[1].trim()
+        .replace(/^(?:(?:estado\s+de\s+hidrataci[oó]n|regular\s+hidrataci[oó]n|areh|ameh)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       if (obs.length > 2) res.obsEstadoHidratacion = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areh\b/i.test(norm)) {
+      res.focusObservation = "AREH:";
     }
-  } else if (/\b(?:ameh|deshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm)) {
+  } else if (/\bameh\b/i.test(norm) || /\bdeshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n\b/i.test(norm)) {
     res.estadoHidratacion = "AMEH";
-    const mObs = text.match(/(?:ameh|deshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameh|ameh|deshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      let obs = mObs[1].trim().replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
+      let obs = mObs[1].trim()
+        .replace(/^(?:(?:estado\s+de\s+hidrataci[oó]n|mal\s+estado\s+de\s+hidrataci[oó]n|deshidratado|areh|ameh)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
       if (obs.length > 2) res.obsEstadoHidratacion = obs;
+    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameh\b/i.test(norm)) {
+      res.focusObservation = "AMEH:";
     }
   }
 
@@ -333,11 +398,11 @@ function extractInteractiveLesionCommand(text) {
   if (!text) return null;
   const norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  // Abrir modal interactivo
-  if (/(?:abrir|editar|ver)\s+(?:imagen\s+interactiva\s+)?lesiones?\s+anterior/i.test(norm)) {
+  // Abrir modal interactivo (requiere mencionar lesiones o tipo de lesión)
+  if (/(?:tipo\s+de\s+lesi[oó]n\s+editar|editar\s+tipo\s+de\s+lesi[oó]n|editar\s+(?:imagen\s+interactiva\s+)?lesiones?\s+anterior|abrir\s+lesiones?\s+anterior|ver\s+lesiones?\s+anterior|editar\s+(?:imagen\s+interactiva\s+)?lesiones?|abrir\s+(?:imagen\s+interactiva\s+)?lesiones?|abrir\s+imagen\s+interactiva)/i.test(norm)) {
     return { action: "abrir_modal_lesiones", target: "anterior" };
   }
-  if (/(?:abrir|editar|ver)\s+(?:imagen\s+interactiva\s+)?lesiones?\s+posterior/i.test(norm)) {
+  if (/(?:editar\s+lesiones?\s+posterior|abrir\s+lesiones?\s+posterior|ver\s+lesiones?\s+posterior)/i.test(norm)) {
     return { action: "abrir_modal_lesiones", target: "posterior" };
   }
 
@@ -379,11 +444,12 @@ function proposeExamenClinico(text, fields) {
     return { handled: true, interactiveCommand: cmd, entries: [] };
   }
 
-  const ecto = extractEctoscopia(text);
-  const pt = extractPesoTalla(text);
-  const piel = extractPielAnexos(text);
-  const vitales = extractFuncionesVitales(text);
-  const estom = extractEstomatologico(text);
+  const normalizedText = normalizeClinicalAcronyms(text);
+  const ecto = extractEctoscopia(normalizedText);
+  const pt = extractPesoTalla(normalizedText);
+  const piel = extractPielAnexos(normalizedText);
+  const vitales = extractFuncionesVitales(normalizedText);
+  const estom = extractEstomatologico(normalizedText);
 
   const hasAnyData = Object.keys(ecto).length > 0 || Object.keys(pt).length > 0 ||
                      Object.keys(piel).length > 0 || Object.keys(vitales).length > 0 ||
@@ -533,5 +599,35 @@ function proposeExamenClinico(text, fields) {
     if (f) entries.push({ field: f, valor: estom.atm });
   }
 
-  return { handled: entries.length > 0, entries };
+  if (ecto.focusObservation) {
+    const fObs = findF(new RegExp(`^${ecto.focusObservation}`, "i"));
+    if (fObs && !entries.some((e) => e.field === fObs)) {
+      entries.push({ field: fObs, valor: "" });
+    }
+  }
+
+  return {
+    handled: entries.length > 0 || Boolean(ecto.focusObservation),
+    entries,
+    focusObservation: ecto.focusObservation || null
+  };
+}
+
+if (typeof window !== "undefined") {
+  window.normalizeClinicalAcronyms = normalizeClinicalAcronyms;
+  window.proposeExamenClinico = proposeExamenClinico;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    normalizeClinicalAcronyms,
+    extractEctoscopia,
+    extractPesoTalla,
+    extractPielAnexos,
+    extractFuncionesVitales,
+    extractEstomatologico,
+    extractInteractiveLesionCommand,
+    proposeExamenClinico,
+    TIPOS_LESIONES_INTERACTIVAS
+  };
 }

@@ -801,6 +801,9 @@ async function processText(rawText) {
   // Limpiar prefijo opcional de invocación si el doctor lo usó
   let text = rawTrimmed.replace(/^(?:dentai|doctor|asistente)[,\s]*/i, "").trim();
   if (!text) return;
+  if (typeof normalizeClinicalAcronyms === "function") {
+    text = normalizeClinicalAcronyms(text);
+  }
 
   addTranscript(text);
   const s = await getSettings();
@@ -852,6 +855,33 @@ async function processText(rawText) {
     if (examen && examen.handled) {
       if (examen.interactiveCommand) {
         await handleInteractiveLesionVoice(examen.interactiveCommand);
+        return;
+      }
+      if (examen.focusObservation) {
+        const obsField = state.fields.find((f) => new RegExp(`^${examen.focusObservation}`, "i").test(f.etiqueta || ""));
+        if (obsField) {
+          try {
+            const t = await activeTab();
+            const tabId = (t && t.id) || (state.tab && state.tab.id);
+            if (tabId) {
+              await chrome.scripting.executeScript({
+                target: { tabId, allFrames: true },
+                func: (domKey) => {
+                  const el = document.querySelector(`[data-dentai-key="${domKey}"]`) || document.getElementById(domKey);
+                  if (el) {
+                    el.focus();
+                    el.scrollIntoView({ block: "center", behavior: "smooth" });
+                    el.style.outline = "3px solid #0284c7";
+                    setTimeout(() => { el.style.outline = ""; }, 2500);
+                  }
+                },
+                args: [obsField.key || obsField.domId || ""]
+              });
+            }
+          } catch (e) {}
+        }
+        speak(`Listo. Dicta la observación para ${examen.focusObservation.replace(":", "")}.`);
+        setStatus(`Campo ${examen.focusObservation} listo. Dicta la nueva observación.`);
         return;
       }
       if (examen.entries && examen.entries.length > 0) {

@@ -90,6 +90,19 @@ Tu objetivo es procesar las conversaciones y dictados capturados en tiempo real 
      * "referencia", "como referencia" -> asigna a "Referencia:".
      * "distrito", "provincia", "departamento" -> asigna a sus selectores correspondientes.
    - Examen Clínico y Triaje Estomatológico (Módulo 2 EXAMEN CLÍNICO):
+     * RECONOCIMIENTO DE SIGLAS MÉDICAS Y MODIFICACIÓN DIRECTA (Ahorro de tiempo clínico):
+       - El odontólogo suele decir directamente las siglas sin decir el nombre largo del campo:
+         * "ABEG", "abeja", "ABG", "a beg" -> Apreciación General = "ABEG" (no requiere observación).
+         * "AREG", "ARG", "a reg", "a rek" -> Apreciación General = "AREG". Si dicta observación o dice "cambiar AREG [obs]" o "editar AREG [obs]", asigna el texto a "AREG:".
+         * "AMEG", "A MEG", "a meg" -> Apreciación General = "AMEG". Si dicta observación o dice "cambiar AMEG [obs]" o "editar AMEG [obs]", asigna el texto a "AMEG:".
+         * "ABEN", "a ben", "aven", "estado nutricional AB" -> Apreciación del Estado Nutricional = "ABEN" (no requiere observación).
+         * "AREN", "a REM", "arem", "a ren" -> Apreciación del Estado Nutricional = "AREN". Si dicta observación o dice "cambiar AREN [obs]" o "editar AREN [obs]", asigna el texto a "AREN:".
+         * "AMEN", "amén", "a men" -> Apreciación del Estado Nutricional = "AMEN". Si dicta observación o dice "cambiar AMEN [obs]" o "editar AMEN [obs]", asigna el texto a "AMEN:".
+         * "ABEH", "a beh", "abe hache" -> Apreciación del Estado de Hidratación = "ABEH" (no requiere observación).
+         * "AREH", "a reh", "are hache", "arh" -> Apreciación del Estado de Hidratación = "AREH". Si dicta observación o dice "cambiar AREH [obs]" o "editar AREH [obs]", asigna a "AREH:".
+         * "AMEH", "a meh", "ame hache", "a meh h" -> Apreciación del Estado de Hidratación = "AMEH". Si dicta observación o dice "cambiar AMEH [obs]" o "editar AMEH [obs]", asigna a "AMEH:".
+       - "cambiar [sigla1] a [sigla2]" (ej: "cambiar AREG a ABEG", "cambiar AREN a ABEN") -> cambia el selector a [sigla2].
+       - "tipo de lesión editar" -> comando "abrir_modal_lesiones" con destino "anterior".
      * REGLA OBLIGATORIA PARA DESPLEGABLES (select): Si el campo tiene 'opciones', DEBES seleccionar obligatoriamente una de las opciones textuales disponibles en el array 'opciones':
        - Apreciación General: "ABEG" (Buen Estado General), "AREG" (Regular Estado General), "AMEG" (Mal Estado General).
          * Si es AREG y el usuario dicta observación, asigna el texto al campo "AREG:".
