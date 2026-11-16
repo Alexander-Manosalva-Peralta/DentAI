@@ -825,6 +825,16 @@ async function processText(rawText) {
   // Comandos de voz directos (ejecución rápida nativa)
   const normRaw = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,;:]+$/, "").trim();
 
+  // COMANDO DE MICRÓFONO: APAGAR / SILENCIAR / PAUSAR (Solo 2 estados: Escucha activa vs Micrófono apagado)
+  const MIC_OFF_REGEX = /^(?:apagar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|silenciar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|desactivar(?:\s+(?:el\s+)?micr[oó]fono)?|pausar(?:\s+(?:el\s+)?micr[oó]fono)?|apaga(?:\s+el\s+micr[oó]fono)?|silencia(?:\s+el\s+micr[oó]fono)?)$/i;
+  if (MIC_OFF_REGEX.test(normRaw)) {
+    state.paused = true;
+    updatePulseBadge(state.listening, true);
+    speak("Micrófono apagado.");
+    setStatus("Micrófono apagado. Di 'continuar' para reactivar.");
+    return;
+  }
+
   // COMANDO GLOBAL: MODALES DE ALERTA O NOTIFICACIONES ("enterado", "aceptar", "entendido", "cerrar alerta", "cerrar modal", etc.)
   const ALERT_MODAL_REGEX = /^(?:enterado|aceptar|entendido|de\s+acuerdo|comprendido|continuar|cerrar(?:\s+(?:alerta|notificaci[oó]n|aviso|modal|di[aá]logo|ventana))?|ok(?:\s+cerrar)?)$/i;
   if (ALERT_MODAL_REGEX.test(normRaw)) {
@@ -2333,20 +2343,17 @@ function init() {
     const pulseBadge = $("pulseBadge");
     if (pulseBadge) {
       pulseBadge.style.cursor = "pointer";
-      pulseBadge.title = "Clic para pausar o reactivar el micrófono";
+      pulseBadge.title = "Clic para encender o apagar el micrófono";
       pulseBadge.onclick = () => {
-        if (!state.listening) {
-          startListening();
+        state.paused = !state.paused;
+        updatePulseBadge(state.listening, state.paused);
+        if (state.paused) {
+          speak("Micrófono apagado.");
+          setStatus("Micrófono apagado. Clic o di 'continuar' para reactivar.");
         } else {
-          state.paused = !state.paused;
-          updatePulseBadge(state.listening, state.paused);
-          if (state.paused) {
-            try { state.recognition.stop(); } catch (e) {}
-            setStatus("Micrófono pausado. Clic para reactivar.");
-          } else {
-            try { state.recognition.start(); } catch (e) {}
-            setStatus("Manos libres activo. Escuchando…");
-          }
+          speak("Escuchando.");
+          setStatus("Escucha activa. Escuchando…");
+          startListening();
         }
       };
     }

@@ -269,6 +269,7 @@ function dentaiScan(anamnesisFields = []) {
   const seenRadio = new Set();
   const els = document.querySelectorAll("input, select, textarea, [contenteditable='true']");
   let k = 0;
+  let examenObsCount = 0;
 
   for (const el of els) {
     if (out.length >= MAX) break;
@@ -355,9 +356,20 @@ function dentaiScan(anamnesisFields = []) {
         entry.etiqueta = "Temperatura (Piel y Anexos)";
       }
       // Desambiguar Observación (General / Funciones Vitales vs Conclusión / Final)
-      if (/^observaci[oó]n:?$/i.test(lbl.trim())) {
-        const isConclusion = /conclusi[oó]n|final/i.test(entry.seccion) ||
-                             /conclusi[oó]n|final/i.test((el.name || "") + " " + (el.id || ""));
+      if (/^observaci[oó]n(?:es)?:?$/i.test(lbl.trim())) {
+        let isConclusion = /conclusi[oó]n|final/i.test(entry.seccion) ||
+                           /conclusi[oó]n|final/i.test((el.name || "") + " " + (el.id || ""));
+        if (!isConclusion) {
+          const card = el.closest(".card, .panel, fieldset, table, div");
+          const cardText = card ? (card.textContent || "").substring(0, 600) : "";
+          if (/conclusi[oó]n/i.test(cardText) && !/funciones\s+vitales/i.test(cardText)) {
+            isConclusion = true;
+          }
+        }
+        if (!isConclusion && examenObsCount > 0) {
+          isConclusion = true;
+        }
+        examenObsCount++;
         if (isConclusion) {
           entry.etiqueta = "Observación (Conclusión)";
           entry.dependsOn = "conclusion";
@@ -526,14 +538,27 @@ function dentaiFill(items) {
           }
         }
 
-        // Búsqueda directa por texto o valor exacto / contenido
-        for (let i = 0; it.contexto !== "anamnesis" && i < el.options.length; i++) {
-          const o = el.options[i];
+        // Búsqueda en dos fases para SELECT (evita que "No característica" se seleccione al pedir "Característica"):
+        // Fase 1: Coincidencia EXACTA por texto o valor en cualquiera de las opciones
+        opt = Array.from(el.options).find((o) => {
           const oText = norm(o.text);
           const oVal = norm(o.value);
-          if (oText === v || oVal === v) { opt = o; break; }
-          if (oText.includes(v) || (v.length > 2 && v.includes(oText))) { opt = o; break; }
-          if (/dni/i.test(v) && (/dni/i.test(oText) || /dni/i.test(oVal))) { opt = o; break; }
+          return oText === v || oVal === v;
+        });
+
+        // Fase 2: Coincidencia parcial o por patrón clínico (solo si no hubo exacta)
+        if (!opt && it.contexto !== "anamnesis") {
+          opt = Array.from(el.options).find((o) => {
+            const oText = norm(o.text);
+            const oVal = norm(o.value);
+            if (!oText || oText.startsWith("::")) return false;
+            // Si el valor buscado NO empieza con "no " o "sin ", no permitir que coincida con una opción que sí empiece con "no " o "sin "
+            if (!v.startsWith("no ") && !v.startsWith("sin ") && (oText.startsWith("no ") || oText.startsWith("sin "))) {
+              return false;
+            }
+            if (/dni/i.test(v) && (/dni/i.test(oText) || /dni/i.test(oVal))) return true;
+            return oText.includes(v) || (v.length > 2 && v.includes(oText));
+          });
         }
 
         // Si es DNI (index 0 suele ser ::seleccione::)
@@ -566,8 +591,14 @@ function dentaiFill(items) {
         }
 
         if (!opt && it.contexto !== "anamnesis") {
-          // Último recurso: si el texto coincide con cualquier opción
-          opt = Array.from(el.options).find((o) => o.text.trim().length > 1 && norm(o.text).includes(v));
+          // Último recurso: si el texto coincide con cualquier opción (respetando negaciones)
+          opt = Array.from(el.options).find((o) => {
+            const oText = norm(o.text);
+            if (!v.startsWith("no ") && !v.startsWith("sin ") && (oText.startsWith("no ") || oText.startsWith("sin "))) {
+              return false;
+            }
+            return o.text.trim().length > 1 && oText.includes(v);
+          });
         }
 
         if (opt) {

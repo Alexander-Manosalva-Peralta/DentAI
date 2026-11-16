@@ -40,8 +40,8 @@ function normalizeClinicalAcronyms(text) {
   // Limpiar muletillas de inicio en dictado continuo/corrido
   t = t.replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/gi, "");
 
-  // Diccionario fonético para Facies (fáciles, facile, faciles, faciales, facial, faz, fases, fase, faces, fascies, facie, fascie, face)
-  t = t.replace(/\b(?:f[aá]ciles?|facil(?:es)?|faciales?|facial|fa[sc]+ies?|fa[sc]+ie|faces?|fases?|faz)\b/gi, "facies");
+  // Diccionario fonético para Facies (fácil es, fáciles, facile, faciles, faciales, facial, faz, fases, fase, faces, fascies, facie, fascie, face)
+  t = t.replace(/\b(?:f[aá]cil\s+es|f[aá]ciles?|facil(?:es)?|faciales?|facial|fa[sc]+ies?|fa[sc]+ie|faces?|fases?|faz)\b/gi, "facies");
 
   // 1. ABEH / AREH / AMEH (tolerancia a 'hache', 'h' final, letras separadas, terminación en 'a')
   t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh|ameha|dameh)\b/gi, "AMEH");
@@ -258,24 +258,24 @@ function extractEctoscopia(text) {
   }
 
   // "escribir dentro de no característica [texto]" o "facies no característica [texto]"
-  const mFaciesNo = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?no\s+caracter[ií]stica|facies\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
+  const mFaciesNo = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?no\s+caracter[ií]stica|facies(?:\s+es)?\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
   if (!isBorrarNoCaract && mFaciesNo && mFaciesNo[1].trim().length > 2) {
     res.facies = "No característica";
-    let obs = mFaciesNo[1].trim().replace(/^(?:(?:facies\s+)?no\s+caracter[ií]stica\s*[,;:]?\s*)+/i, "")
+    let obs = mFaciesNo[1].trim().replace(/^(?:(?:facies(?:\s+es)?\s+)?no\s+caracter[ií]stica\s*[,;:]?\s*)+/i, "")
       .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
     if (obs.length > 2) res.obsFaciesNoCaracteristica = capitalizeFirstLetter(obs);
-  } else if (!isBorrarNoCaract && !res.facies && /\b(?:facies\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)\b/i.test(norm)) {
+  } else if (!isBorrarNoCaract && !res.facies && /\b(?:facies(?:\s+es)?\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)\b/i.test(norm)) {
     res.facies = "No característica";
   }
 
   // "escribir dentro de característica [texto]" o "facies característica [texto]"
-  const mFaciesSi = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?caracter[ií]stica|facies\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
-  if (!isBorrarCaract && !res.facies && mFaciesSi && mFaciesSi[1].trim().length > 2) {
+  const mFaciesSi = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?caracter[ií]stica|facies(?:\s+es)?\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
+  if (!isBorrarCaract && !res.facies && mFaciesSi && mFaciesSi[1].trim().length > 2 && !/\bno\s+caracter[ií]stica\b/i.test(norm)) {
     res.facies = "Característica";
-    let obs = mFaciesSi[1].trim().replace(/^(?:(?:facies\s+)?caracter[ií]stica\s*[,;:]?\s*)+/i, "")
+    let obs = mFaciesSi[1].trim().replace(/^(?:(?:facies(?:\s+es)?\s+)?caracter[ií]stica\s*[,;:]?\s*)+/i, "")
       .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
     if (obs.length > 2) res.obsFaciesCaracteristica = capitalizeFirstLetter(obs);
-  } else if (!isBorrarCaract && !res.facies && /\b(?:facies\s+caracter[ií]stica|facies\s+caracter[ií]stico|caracter[ií]stica)\b/i.test(norm) && !/\bno\s+caracter[ií]stica\b/i.test(norm)) {
+  } else if (!isBorrarCaract && !res.facies && /\b(?:facies(?:\s+es)?\s+caracter[ií]stica|facies(?:\s+es)?\s+caracter[ií]stico|caracter[ií]stica)\b/i.test(norm) && !/\bno\s+caracter[ií]stica\b/i.test(norm)) {
     res.facies = "Característica";
   }
 
@@ -472,10 +472,10 @@ function extractFuncionesVitales(text) {
     res.pulso = mPulso[1];
   }
 
-  // Presión Arterial (mm Hg)
-  const mPresion = norm.match(/(?:presi[oó]n|presi[oó]n\s+arterial)\s*(?:es|de|:)?\s*(\d{2,3})\s*(?:sobre|\/|con|-)\s*(\d{2,3})/i);
+  // Presión Arterial (mm Hg) - Acepta número único (ej: "presión arterial 90") o compuesto (ej: "120/80", "120 sobre 80", "120 80")
+  const mPresion = norm.match(/(?:presi[oó]n\s+arterial|presi[oó]n|\bpa\b)\s*(?:es|de|:)?\s*(\d{2,3})(?:\s*(?:sobre|\/|con|-|\s+)\s*(\d{2,3}))?/i);
   if (mPresion) {
-    res.presionArterial = `${mPresion[1]}/${mPresion[2]}`;
+    res.presionArterial = mPresion[2] ? `${mPresion[1]}/${mPresion[2]}` : mPresion[1];
   }
 
   // Observación de Conclusión / Final

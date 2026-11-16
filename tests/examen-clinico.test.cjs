@@ -738,3 +738,101 @@ test("nuevas capacidades examen clínico: alertas globales, imagen interactiva, 
   assert.equal(pAnexPiel.handled, true);
   assert.equal(pAnexPiel.entries.find((e) => e.field.etiqueta.includes("Anexos")).valor, "Normal");
 });
+
+test("facies característica vs no característica, presión arterial única/compuesta y desambiguación de observaciones", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // 1. Facies Característica vs No característica en propuesta y en DOM con dentaiFill
+  const faciesSelect = s.w.document.querySelector('select[name="facies"]');
+  assert.equal(faciesSelect.options[1].text, "No característica");
+  assert.equal(faciesSelect.options[2].text, "Característica");
+
+  // A) Dictado exacto "facies característica"
+  const pCaract = s.propose("facies característica");
+  assert.equal(pCaract.handled, true);
+  const entryCaract = pCaract.entries.find((e) => e.field.name === "facies");
+  assert.ok(entryCaract, "Debe proponer facies");
+  assert.equal(entryCaract.valor, "Característica");
+
+  // Llenar en DOM con dentaiFill -> NO debe seleccionar "No característica"
+  s.w.dentaiFill([{ key: entryCaract.field.key, domId: entryCaract.field.domId, name: entryCaract.field.name, valor: entryCaract.valor, tipo: "select" }]);
+  assert.equal(faciesSelect.value, "Característica", "dentaiFill debe seleccionar Característica exactamente");
+
+  // B) Dictado fonético de Google Web Speech "fácil es característica"
+  const pFacilEs = s.propose("fácil es característica");
+  assert.equal(pFacilEs.handled, true);
+  assert.equal(pFacilEs.entries.find((e) => e.field.name === "facies").valor, "Característica");
+
+  // C) Dictado "facies no característica"
+  const pNoCaract = s.propose("facies no característica");
+  assert.equal(pNoCaract.handled, true);
+  const entryNoCaract = pNoCaract.entries.find((e) => e.field.name === "facies");
+  assert.equal(entryNoCaract.valor, "No característica");
+  s.w.dentaiFill([{ key: entryNoCaract.field.key, domId: entryNoCaract.field.domId, name: entryNoCaract.field.name, valor: entryNoCaract.valor, tipo: "select" }]);
+  assert.equal(faciesSelect.value, "No característica");
+
+  // 2. Presión arterial (número único, compuesto y dictado corrido de funciones vitales)
+  // A) Número único: "presión arterial 90" o "presión 90"
+  const pPresion90 = s.propose("presión arterial 90");
+  assert.equal(pPresion90.handled, true);
+  assert.equal(pPresion90.entries.find((e) => e.field.name === "presion_arterial").valor, "90");
+
+  const pPresionCorta = s.propose("presión 90");
+  assert.equal(pPresionCorta.handled, true);
+  assert.equal(pPresionCorta.entries.find((e) => e.field.name === "presion_arterial").valor, "90");
+
+  // B) Número compuesto: "120 sobre 80", "120 80", "120/80"
+  const pPresionComp1 = s.propose("presión arterial 120 sobre 80");
+  assert.equal(pPresionComp1.handled, true);
+  assert.equal(pPresionComp1.entries.find((e) => e.field.name === "presion_arterial").valor, "120/80");
+
+  const pPresionComp2 = s.propose("presión arterial 120 80");
+  assert.equal(pPresionComp2.handled, true);
+  assert.equal(pPresionComp2.entries.find((e) => e.field.name === "presion_arterial").valor, "120/80");
+
+  // C) Dictado de las 4 funciones vitales en una sola intervención
+  const p4Vitales = s.propose("temperatura corporal 36.5, frecuencia respiratoria 18, pulso 75, presión arterial 90");
+  assert.equal(p4Vitales.handled, true);
+  assert.equal(p4Vitales.entries.length, 4);
+  assert.equal(p4Vitales.entries.find((e) => e.field.name === "temperatura_corporal").valor, "36.5");
+  assert.equal(p4Vitales.entries.find((e) => e.field.name === "frecuencia_respiratoria").valor, "18");
+  assert.equal(p4Vitales.entries.find((e) => e.field.name === "pulso").valor, "75");
+  assert.equal(p4Vitales.entries.find((e) => e.field.name === "presion_arterial").valor, "90");
+
+  // Llenar en DOM las 4 funciones vitales
+  s.w.dentaiFill(p4Vitales.entries.map((e) => ({ key: e.field.key, domId: e.field.domId, name: e.field.name, valor: e.valor, tipo: "text" })));
+  assert.equal(s.w.document.querySelector('input[name="temperatura_corporal"]').value, "36.5");
+  assert.equal(s.w.document.querySelector('input[name="frecuencia_respiratoria"]').value, "18");
+  assert.equal(s.w.document.querySelector('input[name="pulso"]').value, "75");
+  assert.equal(s.w.document.querySelector('input[name="presion_arterial"]').value, "90");
+
+  // 3. Desambiguación de Observación General vs Observación de Conclusión
+  const obsGeneralField = s.w.fields.find((f) => f.etiqueta === "Observación General");
+  const obsConclusionField = s.w.fields.find((f) => f.etiqueta === "Observación (Conclusión)");
+  assert.ok(obsGeneralField, "Debe detectar Observación General");
+  assert.ok(obsConclusionField, "Debe detectar Observación (Conclusión)");
+  assert.equal(obsGeneralField.name, "observacion_vitales");
+  assert.equal(obsConclusionField.name, "observacion_conclusion");
+
+  // A) Dictado de Observación General
+  const pObsGen = s.propose("observación general paciente acude normotenso y tranquilo");
+  assert.equal(pObsGen.handled, true);
+  const entryObsGen = pObsGen.entries.find((e) => e.field.name === "observacion_vitales");
+  assert.ok(entryObsGen, "Debe mapear a observacion_vitales");
+  assert.equal(entryObsGen.valor, "Paciente acude normotenso y tranquilo");
+
+  // B) Dictado de Observación de Conclusión
+  const pObsConc = s.propose("observación de conclusión interconsulta con cardiología y control en 6 meses");
+  assert.equal(pObsConc.handled, true);
+  const entryObsConc = pObsConc.entries.find((e) => e.field.name === "observacion_conclusion");
+  assert.ok(entryObsConc, "Debe mapear a observacion_conclusion");
+  assert.equal(entryObsConc.valor, "Interconsulta con cardiología y control en 6 meses");
+
+  // C) Llenado en DOM
+  s.w.dentaiFill([
+    { key: entryObsGen.field.key, domId: entryObsGen.field.domId, name: entryObsGen.field.name, valor: entryObsGen.valor, tipo: "textarea" },
+    { key: entryObsConc.field.key, domId: entryObsConc.field.domId, name: entryObsConc.field.name, valor: entryObsConc.valor, tipo: "textarea" }
+  ]);
+  assert.equal(s.w.document.querySelector('textarea[name="observacion_vitales"]').value, "Paciente acude normotenso y tranquilo");
+  assert.equal(s.w.document.querySelector('textarea[name="observacion_conclusion"]').value, "Interconsulta con cardiología y control en 6 meses");
+});
