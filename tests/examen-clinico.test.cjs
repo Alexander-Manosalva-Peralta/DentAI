@@ -836,3 +836,33 @@ test("facies característica vs no característica, presión arterial única/com
   assert.equal(s.w.document.querySelector('textarea[name="observacion_vitales"]').value, "Paciente acude normotenso y tranquilo");
   assert.equal(s.w.document.querySelector('textarea[name="observacion_conclusion"]').value, "Interconsulta con cardiología y control en 6 meses");
 });
+
+test("control de microfono estricto 2 estados y variaciones foneticas AMG", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // 1. Variaciones AMG -> AMEG
+  const p1 = s.propose("apreciación general AMG");
+  assert.equal(p1.handled, true);
+  assert.equal(p1.entries.find((e) => e.field.name === "apreciacion_general").valor, "AMEG");
+
+  const p2 = s.propose("apreciación general a mg");
+  assert.equal(p2.handled, true);
+  assert.equal(p2.entries.find((e) => e.field.name === "apreciacion_general").valor, "AMEG");
+
+  // 2. Regex de apagado de micrófono (solo 2 estados)
+  const MIC_OFF_REGEX = /^(?:apagar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|silenciar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|desactivar(?:\s+(?:el\s+)?micr[oó]fono)?|pausar(?:\s+(?:el\s+)?micr[oó]fono)?|apaga(?:\s+el\s+micr[oó]fono)?|silencia(?:\s+el\s+micr[oó]fono)?|micr[oó]fono\s+inactivo)$/i;
+  assert.ok(MIC_OFF_REGEX.test("apagar microfono"));
+  assert.ok(MIC_OFF_REGEX.test("silenciar microfono"));
+  assert.ok(MIC_OFF_REGEX.test("pausar"));
+  assert.ok(MIC_OFF_REGEX.test("desactivar microfono"));
+  assert.ok(MIC_OFF_REGEX.test("microfono inactivo"));
+
+  // 3. Regex de reactivación estricta (solo "activar" o "continuar")
+  const WAKE_UP_REGEX = /^(?:activar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|activa|continuar|reanudar|empezar)$/i;
+  assert.ok(WAKE_UP_REGEX.test("activar"));
+  assert.ok(WAKE_UP_REGEX.test("activar microfono"));
+  assert.ok(WAKE_UP_REGEX.test("continuar"));
+  // Clínicos no deben despertar el micrófono
+  assert.equal(WAKE_UP_REGEX.test("apreciacion general areg"), false);
+  assert.equal(WAKE_UP_REGEX.test("diente 18 resina"), false);
+});

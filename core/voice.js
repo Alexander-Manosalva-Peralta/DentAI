@@ -21,10 +21,37 @@ function initWebSpeech() {
   r.onstart = () => {
     state.listening = true;
     updatePulseBadge(true, state.paused);
-    setStatus("Manos libres activo. Escuchando…");
+    if (state.paused) {
+      setStatus("Micrófono inactivo. Di 'activar' o 'continuar' para reanudar.");
+    } else {
+      setStatus("Manos libres activo. Escuchando…");
+    }
   };
 
   r.onresult = (ev) => {
+    // Si el micrófono está inactivo:
+    if (state.paused) {
+      let final = "";
+      for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+        if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
+      }
+      if (final) {
+        const cleanFinal = final.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, "").trim();
+        // Solo despierta con "activar" o "continuar"
+        const isWakeUp = /^(?:activar(?:\s+(?:el\s+)?micr[oó]fono|\s+(?:el\s+)?audio)?|activa|continuar|reanudar|empezar)$/i.test(cleanFinal);
+        if (isWakeUp) {
+          state.paused = false;
+          updatePulseBadge(true, false);
+          setStatus("Escucha activa. Escuchando…");
+          if (typeof speak === "function") speak("Micrófono activo.");
+          addTranscript(final);
+        } else {
+          console.log("Micrófono inactivo: ignorando orden ->", final.trim());
+        }
+      }
+      return;
+    }
+
     let interim = "";
     let final = "";
     for (let i = ev.resultIndex; i < ev.results.length; ++i) {
@@ -103,7 +130,7 @@ function initWebSpeech() {
     updatePulseBadge(false, state.paused);
     if (ev.error === "not-allowed") {
       banner(`Permiso de micrófono requerido. <a href="mic.html" target="_blank" style="text-decoration:underline;font-weight:bold;">Conceder permiso aquí ↗</a>`, "err");
-    } else if (!state.paused && ev.error !== "aborted") {
+    } else if (ev.error !== "aborted") {
       setTimeout(() => {
         startListening();
       }, 300);
@@ -113,11 +140,9 @@ function initWebSpeech() {
   r.onend = () => {
     state.listening = false;
     updatePulseBadge(false, state.paused);
-    if (!state.paused) {
-      setTimeout(() => {
-        startListening();
-      }, 200);
-    }
+    setTimeout(() => {
+      startListening();
+    }, 200);
   };
 
   state.recognition = r;
@@ -125,7 +150,7 @@ function initWebSpeech() {
 }
 
 function startListening() {
-  if (state.listening && !state.paused) return;
+  if (state.listening) return;
   if (!state.recognition) initWebSpeech();
   try {
     state.recognition.start();

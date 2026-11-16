@@ -35,6 +35,13 @@ const OrbVisualizer = {
   },
 
   setHearing(active, energy = 0.85) {
+    // Si el micrófono está inactivo, jamás animar ondas ni silenciar ojos
+    if (this.heroCard && this.heroCard.classList.contains("inactive")) {
+      this.isHearing = false;
+      this.targetEnergy = 0;
+      this.speechEnergy = 0;
+      return;
+    }
     this.isHearing = active;
     if (active) {
       this.targetEnergy = Math.max(0.65, Math.min(1.0, energy));
@@ -73,15 +80,37 @@ const OrbVisualizer = {
 
   setPaused(paused) {
     if (this.heroCard) {
-      if (paused) this.heroCard.classList.add("paused");
-      else this.heroCard.classList.remove("paused");
+      if (paused) {
+        this.heroCard.classList.add("inactive");
+        this.heroCard.classList.remove("hearing", "speaking", "thinking", "paused");
+        this.targetEnergy = 0;
+        this.speechEnergy = 0;
+        this.isHearing = false;
+        this.isSpeaking = false;
+        if (this.ctx && this.canvas) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+      } else {
+        this.heroCard.classList.remove("inactive", "paused");
+      }
     }
   },
 
   setActive(active) {
     if (this.heroCard) {
-      if (!active) this.heroCard.classList.add("inactive");
-      else this.heroCard.classList.remove("inactive");
+      if (!active) {
+        this.heroCard.classList.add("inactive");
+        this.heroCard.classList.remove("hearing", "speaking", "thinking", "paused");
+        this.targetEnergy = 0;
+        this.speechEnergy = 0;
+        this.isHearing = false;
+        this.isSpeaking = false;
+        if (this.ctx && this.canvas) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+      } else {
+        this.heroCard.classList.remove("inactive", "paused");
+      }
     }
   },
 
