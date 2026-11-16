@@ -48,13 +48,16 @@ function updatePulseBadge(active, paused = false) {
   const text = $("pulseText");
   if (!badge || !text) return;
 
-  // Solo dos estados estrictos: Escucha activa vs Micrófono apagado
-  if (!active || paused) {
+  if (!active) {
     badge.className = "pulse-badge inactive";
-    text.textContent = "Micrófono apagado";
+    text.textContent = "Micrófono inactivo";
+    if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setActive(false);
+  } else if (paused) {
+    badge.className = "pulse-badge paused";
+    text.textContent = "Escucha pausada (di 'continuar')";
     if (typeof OrbVisualizer !== "undefined") {
-      OrbVisualizer.setActive(false);
-      OrbVisualizer.setHearing(false);
+      OrbVisualizer.setActive(true);
+      OrbVisualizer.setPaused(true);
     }
   } else {
     badge.className = "pulse-badge";

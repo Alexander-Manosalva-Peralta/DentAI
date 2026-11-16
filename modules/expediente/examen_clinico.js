@@ -49,8 +49,8 @@ function normalizeClinicalAcronyms(text) {
   t = t.replace(/\b(?:a\s+beh\s+h(?:ache)?|abeh\s+h(?:ache)?|abe\s+hache|a\s+be\s+h|a\s+b\s+e\s+h|a\s+beh|abeh|ab\s+eh|a\s+b\s+h|abh|abeha|dabeh)\b/gi, "ABEH");
 
   // 2. ABEG / AREG / AMEG (tolerancia a fonética con 'j', 'ja', 'g', letras separadas)
-  // AMEG: amej, ameja, a meja, a meg, a mek, a med, amig, amec
-  t = t.replace(/\b(?:ameg|amej|ameja|a\s+meja|a\s+meg|a\s+mek|a\s+m\s+e\s+g|am\s+eg|a\s+med|amec|amig|dameg)\b/gi, "AMEG");
+  // AMEG: amej, ameja, a meja, a meg, a mek, a med, amig, amec, amg
+  t = t.replace(/\b(?:ameg|amej|ameja|a\s+meja|a\s+meg|a\s+mek|a\s+m\s+e\s+g|am\s+eg|a\s+med|amec|amig|dameg|amg|a\s+mg|a\s+m\s+g)\b/gi, "AMEG");
   // AREG: arej, areja, a reja, arg, a reg, a rek, a red, a rec, a rex
   t = t.replace(/\b(?:areg|arej|areja|a\s+reja|arg|a\s+reg|a\s+r\s+e\s+g|ar\s+eg|a\s+rek|a\s+red|a\s+rec|a\s+rex|dared)\b/gi, "AREG");
   // ABEG: abej, abeja, aveja, abg, a beg, a veg, aveg, a b e g, ab eg
@@ -69,7 +69,7 @@ function normalizeClinicalAcronyms(text) {
 
   // Casos aislados tras 'apreciación general'
   t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:are|a\s+re|red)\b/gi, "$1AREG");
-  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:ame|a\s+me)\b/gi, "$1AMEG");
+  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:ame|a\s+me|amg|a\s+mg)\b/gi, "$1AMEG");
   t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:abe|a\s+be|ab)\b/gi, "$1ABEG");
 
   // 5. Casos truncados con contexto de Estado Nutricional
