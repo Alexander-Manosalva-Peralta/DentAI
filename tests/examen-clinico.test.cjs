@@ -429,3 +429,41 @@ test("escribir y borrar en campos condicionales con mayúscula inicial siempre",
   s.w.dentaiFill(s.items("borrar AREG"));
   assert.equal(s.w.document.querySelector('[name="areg_obs"]').value, "");
 });
+
+test("variaciones fonéticas de dictado continuo: ARN, a reen, red con deshidratación", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "escribir dentro de ARN mucosas deshidratadas 3.1" -> AREN
+  const pArn = s.propose("escribir dentro de ARN mucosas deshidratadas 3.1");
+  assert.equal(pArn.handled, true);
+  assert.equal(pArn.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "AREN");
+  assert.equal(pArn.entries.find((e) => e.field.etiqueta === "AREN:").valor, "Mucosas deshidratadas 3.1");
+
+  // "escribir dentro de a reen mucosas deshidratadas 3.1" -> AREN
+  const pReen = s.propose("escribir dentro de a reen mucosas deshidratadas 3.1");
+  assert.equal(pReen.handled, true);
+  assert.equal(pReen.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "AREN");
+  assert.equal(pReen.entries.find((e) => e.field.etiqueta === "AREN:").valor, "Mucosas deshidratadas 3.1");
+
+  // "escribir dentro de red mucosas deshidratadas 3.0" -> AREH (por contexto de hidratación)
+  const pRedHid = s.propose("escribir dentro de red mucosas deshidratadas 3.0");
+  assert.equal(pRedHid.handled, true);
+  assert.equal(pRedHid.entries.find((e) => e.field.etiqueta.includes("Hidratación")).valor, "AREH");
+  assert.equal(pRedHid.entries.find((e) => e.field.etiqueta === "AREH:").valor, "Mucosas deshidratadas 3.0");
+
+  // "escribir dentro de red calidez neutral" -> AREG (por ectoscopia general)
+  const pRedGen = s.propose("escribir dentro de red calidez neutral");
+  assert.equal(pRedGen.handled, true);
+  assert.equal(pRedGen.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
+  assert.equal(pRedGen.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Calidez neutral");
+
+  // "borrar ARN"
+  const pBorrarArn = s.propose("borrar ARN");
+  assert.equal(pBorrarArn.handled, true);
+  assert.equal(pBorrarArn.entries.find((e) => e.field.etiqueta === "AREN:").valor, "");
+
+  // "borrar red"
+  const pBorrarRed = s.propose("borrar red");
+  assert.equal(pBorrarRed.handled, true);
+  assert.equal(pBorrarRed.entries.find((e) => e.field.etiqueta === "AREG:").valor, "");
+});

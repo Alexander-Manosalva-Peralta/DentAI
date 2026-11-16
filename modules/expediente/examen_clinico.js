@@ -28,36 +28,42 @@ function normalizeClinicalAcronyms(text) {
   t = t.replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/gi, "");
 
   // 1. ABEH / AREH / AMEH (tolerancia a 'hache', 'h' final, letras separadas, terminación en 'a')
-  t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh|ameha)\b/gi, "AMEH");
-  t = t.replace(/\b(?:a\s+reh\s+h(?:ache)?|areh\s+h(?:ache)?|are\s+hache|a\s+re\s+h|a\s+r\s+e\s+h|a\s+reh|areh|ar\s+eh|a\s+r\s+h|arh|a\s+red\s+h|areha)\b/gi, "AREH");
-  t = t.replace(/\b(?:a\s+beh\s+h(?:ache)?|abeh\s+h(?:ache)?|abe\s+hache|a\s+be\s+h|a\s+b\s+e\s+h|a\s+beh|abeh|ab\s+eh|a\s+b\s+h|abh|abeha)\b/gi, "ABEH");
+  t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh|ameha|dameh)\b/gi, "AMEH");
+  t = t.replace(/\b(?:a\s+reh\s+h(?:ache)?|areh\s+h(?:ache)?|are\s+hache|a\s+re\s+h|a\s+r\s+e\s+h|a\s+reh|areh|ar\s+eh|a\s+r\s+h|arh|a\s+red\s+h|red\s+h(?:ache)?|areha|dareh)\b/gi, "AREH");
+  t = t.replace(/\b(?:a\s+beh\s+h(?:ache)?|abeh\s+h(?:ache)?|abe\s+hache|a\s+be\s+h|a\s+b\s+e\s+h|a\s+beh|abeh|ab\s+eh|a\s+b\s+h|abh|abeha|dabeh)\b/gi, "ABEH");
 
   // 2. ABEG / AREG / AMEG (tolerancia a fonética con 'j', 'ja', 'g', letras separadas)
   // AMEG: amej, ameja, a meja, a meg, a mek, a med, amig, amec
-  t = t.replace(/\b(?:ameg|amej|ameja|a\s+meja|a\s+meg|a\s+mek|a\s+m\s+e\s+g|am\s+eg|a\s+med|amec|amig)\b/gi, "AMEG");
+  t = t.replace(/\b(?:ameg|amej|ameja|a\s+meja|a\s+meg|a\s+mek|a\s+m\s+e\s+g|am\s+eg|a\s+med|amec|amig|dameg)\b/gi, "AMEG");
   // AREG: arej, areja, a reja, arg, a reg, a rek, a red, a rec, a rex
-  t = t.replace(/\b(?:areg|arej|areja|a\s+reja|arg|a\s+reg|a\s+r\s+e\s+g|ar\s+eg|a\s+rek|a\s+red|a\s+rec|a\s+rex)\b/gi, "AREG");
+  t = t.replace(/\b(?:areg|arej|areja|a\s+reja|arg|a\s+reg|a\s+r\s+e\s+g|ar\s+eg|a\s+rek|a\s+red|a\s+rec|a\s+rex|dared)\b/gi, "AREG");
   // ABEG: abej, abeja, aveja, abg, a beg, a veg, aveg, a b e g, ab eg
-  t = t.replace(/\b(?:abeg|abej|abg|abeja|aveja|a\s+beg|a\s+veg|aveg|a\s+b\s+e\s+g|ab\s+eg)\b/gi, "ABEG");
+  t = t.replace(/\b(?:abeg|abej|abg|abeja|aveja|a\s+beg|a\s+veg|aveg|a\s+b\s+e\s+g|ab\s+eg|dabeg)\b/gi, "ABEG");
 
-  // 3. ABEN / AREN / AMEN (tolerancia a 'a rem', 'amén', 'a ven', etc.)
-  t = t.replace(/\b(?:aben|a\s+ben|a\s+ven|aven|a\s+b\s+e\s+n|ab\s+en|ab\s+n)\b/gi, "ABEN");
-  t = t.replace(/\b(?:aren|a\s+rem|arem|a\s+ren|a\s+r\s+e\s+n|ar\s+en|ar\s+n)\b/gi, "AREN");
-  t = t.replace(/\b(?:amen|am[eé]n|a\s+men|a\s+m\s+e\s+n|am\s+en|am\s+n)\b/gi, "AMEN");
+  // 3. ABEN / AREN / AMEN (tolerancia a 'a rem', 'amén', 'a ven', ARN, a reen, etc.)
+  t = t.replace(/\b(?:aben|a\s+ben|a\s+ven|aven|a\s+b\s+e\s+n|ab\s+en|ab\s+n|daben)\b/gi, "ABEN");
+  t = t.replace(/\b(?:aren|a\s+rem|arem|a\s+ren|a\s+reen|reen|arn|a\s+r\s+n|a\s+r\s+e\s+n|ar\s+en|ar\s+n|daren)\b/gi, "AREN");
+  t = t.replace(/\b(?:amen|am[eé]n|a\s+men|a\s+m\s+e\s+n|am\s+en|am\s+n|damen)\b/gi, "AMEN");
 
-  // 4. Casos truncados con contexto de Apreciación General ("are", "a re", "ame", "a me", "abe", "a be")
-  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n|cambiar|editar|modificar)\s+)(?:are|a\s+re)\b/gi, "$1AREG");
-  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n|cambiar|editar|modificar)\s+)(?:ame|a\s+me)\b/gi, "$1AMEG");
-  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n|cambiar|editar|modificar)\s+)(?:abe|a\s+be|ab)\b/gi, "$1ABEG");
+  // 4. Casos donde 'red' o 'are' fue reconocido por 'AREG' o 'AREH'
+  const isHydrationContext = /(?:deshidratad|hidrataci[oó]n|mucosas)/i.test(t);
+  const targetSigla = isHydrationContext ? "AREH" : "AREG";
+
+  t = t.replace(/\b((?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|borrar|borra|vaciar|vacia|poner|anotar)(?:\s+(?:en|dentro\s+de))?|dentro\s+de|en)\s+)(?:red|are|a\s+re)\b/gi, `$1${targetSigla}`);
+
+  // Casos aislados tras 'apreciación general'
+  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:are|a\s+re|red)\b/gi, "$1AREG");
+  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:ame|a\s+me)\b/gi, "$1AMEG");
+  t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:abe|a\s+be|ab)\b/gi, "$1ABEG");
 
   // 5. Casos truncados con contexto de Estado Nutricional
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:ab|a\s+b|abe|a\s+be)\b/gi, "$1ABEN");
-  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:are|a\s+re)\b/gi, "$1AREN");
+  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:are|a\s+re|arn|reen)\b/gi, "$1AREN");
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:ame|a\s+me)\b/gi, "$1AMEN");
 
   // 6. Casos truncados con contexto de Estado de Hidratación
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+de\s+hidrataci[oó]n|hidrataci[oó]n)\s+)(?:ab|a\s+b|abe|a\s+be)\b/gi, "$1ABEH");
-  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+de\s+hidrataci[oó]n|hidrataci[oó]n)\s+)(?:are|a\s+re)\b/gi, "$1AREH");
+  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+de\s+hidrataci[oó]n|hidrataci[oó]n)\s+)(?:are|a\s+re|red)\b/gi, "$1AREH");
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+de\s+hidrataci[oó]n|hidrataci[oó]n)\s+)(?:ame|a\s+me)\b/gi, "$1AMEH");
 
   return t;
