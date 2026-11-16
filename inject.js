@@ -900,8 +900,20 @@ function dentaiNavigate(target) {
     ".navbar a", ".nav-pills a", ".nav-tabs a", ".nav a", "nav a",
     "[role='tab']", "[role='menuitem']", "[data-toggle='tab']", "[data-bs-toggle='tab']",
     ".sidebar a", ".menu a", "a", "button",
+    ".dropdown-menu a", ".dropdown-menu li > a", "ul.dropdown-menu a", ".dropdown-toggle",
+    "[data-toggle='dropdown']", "[data-bs-toggle='dropdown']",
     ".nav-tabs li", ".nav-pills li", ".nav li", ".sidebar li", ".menu li", "[onclick]"
   ];
+
+  // Soporte para comandos compuestos jerárquicos: "X en Y", "X de Y", "X dentro de Y"
+  // Ej: "solicitudes en patologia", "detalle de equipos en reportes de mantenimiento", "instrumental universal en prestamos"
+  let subTarget = "";
+  let parentTarget = "";
+  const compMatch = targetClean.match(/^(.+?)\s+(?:en|dentro\s+de|de|del)\s+(.+)$/i);
+  if (compMatch) {
+    subTarget = compMatch[1].trim();
+    parentTarget = compMatch[2].trim();
+  }
 
   const elements = Array.from(document.querySelectorAll(selectors.join(",")));
   let bestEl = null;
@@ -909,9 +921,13 @@ function dentaiNavigate(target) {
   let bestMatchedText = "";
 
   const targetNoSpace = targetClean.replace(/\s+/g, "");
+  const subTargetNoSpace = subTarget ? subTarget.replace(/\s+/g, "") : "";
+  const parentTargetNoSpace = parentTarget ? parentTarget.replace(/\s+/g, "") : "";
 
   for (const el of elements) {
-    if (!visible(el)) continue;
+    // Si está en la barra de navegación o en un menú desplegable, evaluarlo incluso si el dropdown está cerrado
+    const isMenuElement = !!el.closest(".navbar, nav, .nav, .menu, .dropdown-menu, .dropdown, header, .sidebar, [role='menubar'], [role='menu']");
+    if (!visible(el) && !isMenuElement) continue;
 
     const rawText = (el.innerText || el.textContent || "").trim();
     const cleanText = norm(rawText);
@@ -931,17 +947,38 @@ function dentaiNavigate(target) {
 
       const candNoSpace = c.text.replace(/\s+/g, "");
       let score = 0;
-      if (c.text === targetClean || (candNoSpace && candNoSpace === targetNoSpace)) {
-        score = 100;
-      } else if (candNoSpace.startsWith(targetNoSpace) || candNoSpace.endsWith(targetNoSpace)) {
-        score = 90;
-      } else if (c.text.startsWith(targetClean + " ") || c.text.endsWith(" " + targetClean)) {
-        score = 85;
-      } else if (c.text.includes(targetClean) || (targetNoSpace.length >= 4 && candNoSpace.includes(targetNoSpace))) {
-        const diff = Math.abs(c.text.length - targetClean.length);
-        score = Math.max(50, 85 - diff);
-      } else if ((targetClean.includes(c.text) || (candNoSpace.length >= 4 && targetNoSpace.includes(candNoSpace))) && c.text.length >= 3) {
-        score = 65;
+
+      // 1. Coincidencia jerárquica compuesta ("X en Y")
+      if (subTarget && parentTarget) {
+        const matchesSub = c.text === subTarget || (candNoSpace && candNoSpace === subTargetNoSpace) ||
+                           c.text.startsWith(subTarget + " ") || c.text.includes(subTarget);
+        if (matchesSub) {
+          const parentContainer = el.closest(".dropdown, .dropdown-submenu, li.dropdown, li, .btn-group");
+          const parentText = norm(parentContainer ? (parentContainer.querySelector("a, button, .dropdown-toggle")?.textContent || parentContainer.textContent || "") : "");
+          const navText = norm(el.closest("nav, .navbar, .menu")?.textContent || "");
+          if (parentText.includes(parentTarget) || (parentTargetNoSpace.length >= 4 && parentText.replace(/\s+/g, "").includes(parentTargetNoSpace)) ||
+              navText.includes(parentTarget)) {
+            score = 130;
+          } else {
+            score = 70;
+          }
+        }
+      }
+
+      // 2. Coincidencia estándar si no hubo match jerárquico
+      if (score === 0) {
+        if (c.text === targetClean || (candNoSpace && candNoSpace === targetNoSpace)) {
+          score = 100;
+        } else if (candNoSpace.startsWith(targetNoSpace) || candNoSpace.endsWith(targetNoSpace)) {
+          score = 90;
+        } else if (c.text.startsWith(targetClean + " ") || c.text.endsWith(" " + targetClean)) {
+          score = 85;
+        } else if (c.text.includes(targetClean) || (targetNoSpace.length >= 4 && candNoSpace.includes(targetNoSpace))) {
+          const diff = Math.abs(c.text.length - targetClean.length);
+          score = Math.max(50, 85 - diff);
+        } else if ((targetClean.includes(c.text) || (candNoSpace.length >= 4 && targetNoSpace.includes(candNoSpace))) && c.text.length >= 3) {
+          score = 65;
+        }
       }
 
       if (score > 0) {
@@ -952,7 +989,7 @@ function dentaiNavigate(target) {
         if (el.getAttribute("role") === "tab" || el.getAttribute("data-toggle") === "tab" || el.classList.contains("nav-link")) {
           score += 15;
         }
-        if (el.closest("nav, .nav, .tabs, .sidebar, .menu, header")) {
+        if (el.closest("nav, .nav, .tabs, .sidebar, .menu, header, .navbar")) {
           score += 10;
         }
 
@@ -987,12 +1024,90 @@ function dentaiNavigate(target) {
     const link = bestEl.tagName.toLowerCase() === "a" ? bestEl : (bestEl.querySelector("a") || bestEl.closest("a"));
     const targetEl = link || bestEl;
 
+    // Detectar si el elemento seleccionado es un botón/pestaña desplegable (Dropdown)
+    const isDropdownToggle = targetEl.classList.contains("dropdown-toggle") ||
+                             targetEl.getAttribute("data-toggle") === "dropdown" ||
+                             targetEl.getAttribute("data-bs-toggle") === "dropdown" ||
+                             !!(targetEl.parentElement && (targetEl.parentElement.classList.contains("dropdown") || targetEl.parentElement.classList.contains("dropdown-submenu") || targetEl.parentElement.querySelector(".dropdown-menu"))) ||
+                             !!targetEl.querySelector(".caret, [class*='caret'], [class*='arrow'], [class*='fa-caret']");
+
+    // Si el elemento está dentro de un menú desplegable, abrir primero todos los dropdowns ancestros
+    let ancestor = targetEl.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      if (ancestor.classList.contains("dropdown") || ancestor.classList.contains("dropdown-submenu") || ancestor.tagName.toLowerCase() === "li") {
+        ancestor.classList.add("open", "show");
+        const m = ancestor.querySelector(".dropdown-menu, ul");
+        if (m) {
+          m.style.display = "block";
+          m.style.visibility = "visible";
+          m.style.opacity = "1";
+        }
+      }
+      ancestor = ancestor.parentElement;
+    }
+
     targetEl.scrollIntoView({ block: "center", behavior: "smooth" });
 
     const prevOutline = targetEl.style.outline;
     targetEl.style.outline = "3px solid #0d9488";
-    setTimeout(() => { targetEl.style.outline = prevOutline; }, 2000);
+    setTimeout(() => { targetEl.style.outline = prevOutline; }, 2500);
 
+    // CASO A: Si el usuario pidió abrir la pestaña desplegable (ej: "Patología", "Mantenimiento", "Entrega de materiales")
+    if (isDropdownToggle) {
+      const parentContainer = targetEl.closest(".dropdown, .dropdown-submenu, li, .btn-group") || targetEl.parentElement;
+      if (parentContainer) {
+        parentContainer.classList.add("open", "show");
+        targetEl.setAttribute("aria-expanded", "true");
+        const menu = parentContainer.querySelector(".dropdown-menu, ul");
+        if (menu) {
+          menu.style.display = "block";
+          menu.style.visibility = "visible";
+          menu.style.opacity = "1";
+        }
+      }
+
+      // Ejecutar toggle en jQuery / Bootstrap si está disponible
+      if (typeof window.$ === "function" || typeof window.jQuery === "function") {
+        try {
+          const jq = window.$ || window.jQuery;
+          jq(targetEl).dropdown("toggle");
+          if (parentContainer) jq(parentContainer).addClass("open show");
+        } catch (e) {}
+      }
+
+      // Disparar eventos de mouse (hover y clic) para abrir el menú
+      const mouseOpts = { bubbles: true, cancelable: true, view: window };
+      targetEl.dispatchEvent(new MouseEvent("mouseenter", mouseOpts));
+      targetEl.dispatchEvent(new MouseEvent("mouseover", mouseOpts));
+      targetEl.dispatchEvent(new MouseEvent("mousedown", mouseOpts));
+      targetEl.dispatchEvent(new MouseEvent("mouseup", mouseOpts));
+      targetEl.dispatchEvent(new MouseEvent("click", mouseOpts));
+      if (typeof targetEl.click === "function") {
+        try { targetEl.click(); } catch (e) {}
+      }
+
+      // Extraer las opciones disponibles dentro de este dropdown
+      const subOptions = [];
+      if (parentContainer) {
+        const optionEls = parentContainer.querySelectorAll(".dropdown-menu a, .dropdown-menu li > a");
+        for (const optEl of optionEls) {
+          const optTxt = (optEl.innerText || optEl.textContent || "").trim();
+          if (optTxt && !subOptions.includes(optTxt)) {
+            subOptions.push(optTxt);
+          }
+        }
+      }
+
+      return {
+        ok: true,
+        matched: bestMatchedText,
+        isDropdown: true,
+        options: subOptions,
+        score: Math.round(bestScore)
+      };
+    }
+
+    // CASO B: Si es un elemento con URL o acción directa
     // Obtener la URL del enlace
     let targetUrl = null;
     if (link) {
@@ -1074,15 +1189,16 @@ function dentaiListTabs() {
     }
   };
   const list = [];
-  const els = document.querySelectorAll("[role='tab'], .nav-tabs a, .nav-tabs button, .sidebar a, nav a, .menu a, .nav-link");
+  const els = document.querySelectorAll("[role='tab'], .nav-tabs a, .nav-tabs button, .sidebar a, nav a, .navbar a, .menu a, .nav-link, .dropdown-menu a");
   for (const el of els) {
-    if (!visible(el)) continue;
+    const inNav = !!el.closest("nav, .navbar, .menu, .dropdown-menu");
+    if (!visible(el) && !inNav) continue;
     const txt = norm(el.innerText || el.textContent);
-    if (txt && txt.length < 30 && !list.includes(txt)) {
+    if (txt && txt.length < 35 && !list.includes(txt)) {
       list.push(txt);
     }
   }
-  return list.slice(0, 15);
+  return list.slice(0, 25);
 }
 
 /* ---------- Desplazamiento por voz (Scroll Manos Libres) ---------- */

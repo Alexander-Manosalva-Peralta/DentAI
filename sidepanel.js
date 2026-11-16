@@ -153,6 +153,8 @@ async function navigateToTab(targetName, silentOnFail = false) {
     let found = false;
     let matchedName = targetName;
     let targetUrl = null;
+    let isDropdown = false;
+    let dropdownOpts = [];
 
     for (const r of res) {
       if (r.result && r.result.ok) {
@@ -161,11 +163,30 @@ async function navigateToTab(targetName, silentOnFail = false) {
         if (r.result.url) {
           targetUrl = r.result.url;
         }
+        if (r.result.isDropdown) {
+          isDropdown = true;
+          dropdownOpts = r.result.options || [];
+        }
         break;
       }
     }
 
     if (found) {
+      if (isDropdown) {
+        const topOpts = dropdownOpts.slice(0, 4);
+        if (topOpts.length > 0) {
+          speak(`Opciones de ${matchedName}: ${topOpts.join(", ")}.`);
+          setStatus(`Opciones de "${matchedName}": ${topOpts.join(" | ")}. Di la opción que deseas abrir.`);
+        } else {
+          speak(`Opciones de ${matchedName} desplegadas.`);
+          setStatus(`Pestaña "${matchedName}" desplegada. Di la opción que deseas abrir.`);
+        }
+        setTimeout(async () => {
+          await scan();
+        }, 400);
+        return true;
+      }
+
       if (/guardar/i.test(matchedName)) {
         speak("Guardando.");
         setStatus("Guardando datos en Smile…");
@@ -1084,9 +1105,16 @@ async function processText(rawText) {
   }
 
   // B. Coincidencia directa por nombre de módulo o botón de Smile
-  const DIRECT_MODULES = /^(?:inicio|preregistro|pre registro|pre-registro|servicio|agenda|citas|reporte|reporte de fallas|nuevo|nuevo preregistro|nuevo registro|nuevos registro|nuevo paciente|crear preregistro|crear paciente|modificar|buscar|busca)$/i;
+  const DIRECT_MODULES = /^(?:inicio|preregistro|pre registro|pre-registro|servicio|agenda|citas|reporte|reporte de fallas|nuevo|nuevo preregistro|nuevo registro|nuevos registro|nuevo paciente|crear preregistro|crear paciente|modificar|buscar|busca|patologia|patología|solicitudes|mantenimiento|operaciones de mantenimiento|detalle de equipos|detalle equipos|reportes de mantenimiento|reportes|entrega de materiales|materiales|requisiciones|preclinicas|preclínicas|laboratorio|laboratorios|salidas|salidas al alumno|ajustes inventario subalmacen|informes|consultas|expediente|prestamo|prestamos|préstamo|préstamos|instrumental universal|instrumental alumno|radiologia|radiología|por paciente|cirugia|cirugias|cirugía|cirugías|evaluaciones|esterilizacion|esterilización|caja|control|inventarios|admision|admisión|atencion al usuario|atención al usuario|documentos institucionales|dashboard)$/i;
   if (DIRECT_MODULES.test(normRaw)) {
     const ok = await navigateToTab(normRaw);
+    if (ok) return;
+  }
+
+  // C. Coincidencia con frase compuesta jerárquica directa (ej: "solicitudes en patologia", "detalle de equipos en mantenimiento")
+  if (/^([a-z0-9\s]+)\s+(?:en|dentro\s+de|de|del)\s+([a-z0-9\s]+)$/i.test(normRaw) &&
+      !/(?:dni|documento|celular|tel[eé]fono|correo|email|fecha|nacimiento|calle|nombre|apellido|abeg|areg|ameg|paren|abnh|aren|amen)/i.test(normRaw)) {
+    const ok = await navigateToTab(normRaw, true);
     if (ok) return;
   }
 
