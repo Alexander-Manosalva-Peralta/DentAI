@@ -173,17 +173,16 @@ async function navigateToTab(targetName, silentOnFail = false) {
 
     if (found) {
       if (isDropdown) {
-        const topOpts = dropdownOpts.slice(0, 4);
+        speak(`${matchedName} abierto.`);
+        const topOpts = dropdownOpts.slice(0, 5);
         if (topOpts.length > 0) {
-          speak(`Opciones de ${matchedName}: ${topOpts.join(", ")}.`);
-          setStatus(`Opciones de "${matchedName}": ${topOpts.join(" | ")}. Di la opción que deseas abrir.`);
+          setStatus(`Pestaña "${matchedName}" desplegada (${topOpts.join(" | ")}). Di la opción que deseas.`);
         } else {
-          speak(`Opciones de ${matchedName} desplegadas.`);
-          setStatus(`Pestaña "${matchedName}" desplegada. Di la opción que deseas abrir.`);
+          setStatus(`Pestaña "${matchedName}" desplegada.`);
         }
         setTimeout(async () => {
           await scan();
-        }, 400);
+        }, 300);
         return true;
       }
 

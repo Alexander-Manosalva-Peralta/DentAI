@@ -905,14 +905,31 @@ function dentaiNavigate(target) {
     ".nav-tabs li", ".nav-pills li", ".nav li", ".sidebar li", ".menu li", "[onclick]"
   ];
 
+  // Normalizar variaciones fonéticas comunes de Google Web Speech para menús de Smile:
+  let cleanTarget = targetClean
+    .replace(/\bde\s+talle\b/gi, "detalle")
+    .replace(/\boperacione\b/gi, "operaciones");
+
   // Soporte para comandos compuestos jerárquicos: "X en Y", "X de Y", "X dentro de Y"
-  // Ej: "solicitudes en patologia", "detalle de equipos en reportes de mantenimiento", "instrumental universal en prestamos"
   let subTarget = "";
   let parentTarget = "";
-  const compMatch = targetClean.match(/^(.+?)\s+(?:en|dentro\s+de|de|del)\s+(.+)$/i);
-  if (compMatch) {
-    subTarget = compMatch[1].trim();
-    parentTarget = compMatch[2].trim();
+
+  // Desambiguación específica de REPORTES (Reportes de Mantenimiento vs Reportes de Caja)
+  if (/\b(?:detalle\s+equipos?|detalle\s+de\s+equipos?)\b/i.test(cleanTarget)) {
+    subTarget = "detalle equipos";
+    parentTarget = "mantenimiento";
+  } else if (/\breportes?\b/i.test(cleanTarget) && /\bmantenimiento\b/i.test(cleanTarget)) {
+    subTarget = "reportes";
+    parentTarget = "mantenimiento";
+  } else if (/\breportes?\b/i.test(cleanTarget) && /\bcaja\b/i.test(cleanTarget)) {
+    subTarget = "reportes";
+    parentTarget = "caja";
+  } else {
+    const compMatch = cleanTarget.match(/^(.+?)\s+(?:en|dentro\s+de|de|del)\s+(.+)$/i);
+    if (compMatch) {
+      subTarget = compMatch[1].trim();
+      parentTarget = compMatch[2].trim();
+    }
   }
 
   const elements = Array.from(document.querySelectorAll(selectors.join(",")));
@@ -920,7 +937,7 @@ function dentaiNavigate(target) {
   let bestScore = -1;
   let bestMatchedText = "";
 
-  const targetNoSpace = targetClean.replace(/\s+/g, "");
+  const targetNoSpace = cleanTarget.replace(/\s+/g, "");
   const subTargetNoSpace = subTarget ? subTarget.replace(/\s+/g, "") : "";
   const parentTargetNoSpace = parentTarget ? parentTarget.replace(/\s+/g, "") : "";
 
@@ -955,28 +972,34 @@ function dentaiNavigate(target) {
         if (matchesSub) {
           const parentContainer = el.closest(".dropdown, .dropdown-submenu, li.dropdown, li, .btn-group");
           const parentText = norm(parentContainer ? (parentContainer.querySelector("a, button, .dropdown-toggle")?.textContent || parentContainer.textContent || "") : "");
-          const navText = norm(el.closest("nav, .navbar, .menu")?.textContent || "");
-          if (parentText.includes(parentTarget) || (parentTargetNoSpace.length >= 4 && parentText.replace(/\s+/g, "").includes(parentTargetNoSpace)) ||
-              navText.includes(parentTarget)) {
-            score = 130;
+          // Revisar todos los ancestros hacia arriba en el menú
+          let curr = el.parentElement;
+          let allAncestorsText = parentText;
+          while (curr && curr !== document.body) {
+            allAncestorsText += " " + norm(curr.querySelector("a, button, .dropdown-toggle")?.textContent || curr.textContent || "");
+            curr = curr.parentElement;
+          }
+          if (parentText.includes(parentTarget) || allAncestorsText.includes(parentTarget) ||
+              (parentTargetNoSpace.length >= 4 && allAncestorsText.replace(/\s+/g, "").includes(parentTargetNoSpace))) {
+            score = 150;
           } else {
-            score = 70;
+            score = 50;
           }
         }
       }
 
       // 2. Coincidencia estándar si no hubo match jerárquico
       if (score === 0) {
-        if (c.text === targetClean || (candNoSpace && candNoSpace === targetNoSpace)) {
+        if (c.text === cleanTarget || (candNoSpace && candNoSpace === targetNoSpace)) {
           score = 100;
         } else if (candNoSpace.startsWith(targetNoSpace) || candNoSpace.endsWith(targetNoSpace)) {
           score = 90;
-        } else if (c.text.startsWith(targetClean + " ") || c.text.endsWith(" " + targetClean)) {
+        } else if (c.text.startsWith(cleanTarget + " ") || c.text.endsWith(" " + cleanTarget)) {
           score = 85;
-        } else if (c.text.includes(targetClean) || (targetNoSpace.length >= 4 && candNoSpace.includes(targetNoSpace))) {
-          const diff = Math.abs(c.text.length - targetClean.length);
+        } else if (c.text.includes(cleanTarget) || (targetNoSpace.length >= 4 && candNoSpace.includes(targetNoSpace))) {
+          const diff = Math.abs(c.text.length - cleanTarget.length);
           score = Math.max(50, 85 - diff);
-        } else if ((targetClean.includes(c.text) || (candNoSpace.length >= 4 && targetNoSpace.includes(candNoSpace))) && c.text.length >= 3) {
+        } else if ((cleanTarget.includes(c.text) || (candNoSpace.length >= 4 && targetNoSpace.includes(candNoSpace))) && c.text.length >= 3) {
           score = 65;
         }
       }
@@ -1008,7 +1031,7 @@ function dentaiNavigate(target) {
   if (!bestEl || bestScore < 40) {
     for (const [key, path] of Object.entries(SMILE_URLS)) {
       const keyNoSpace = key.replace(/\s+/g, "");
-      if (targetClean === key || targetNoSpace === keyNoSpace || targetNoSpace.includes(keyNoSpace) || keyNoSpace.includes(targetNoSpace)) {
+      if (cleanTarget === key || targetNoSpace === keyNoSpace || targetNoSpace.includes(keyNoSpace) || keyNoSpace.includes(targetNoSpace)) {
         const directUrl = window.location.origin + path;
         setTimeout(() => {
           window.location.href = directUrl;
@@ -1023,6 +1046,18 @@ function dentaiNavigate(target) {
     // Resolver el elemento de enlace <a> (si bestEl es un <li> o contenedor, extraer el <a> interno)
     const link = bestEl.tagName.toLowerCase() === "a" ? bestEl : (bestEl.querySelector("a") || bestEl.closest("a"));
     const targetEl = link || bestEl;
+
+    // 1. Cerrar cualquier otro menú desplegable abierto previamente para que no se superpongan
+    const openMenus = document.querySelectorAll(".dropdown.open, .dropdown.show, .dropdown-submenu.open, .dropdown-submenu.show, li.open, li.show");
+    for (const om of openMenus) {
+      if (om === targetEl || om.contains(targetEl) || targetEl.contains(om)) continue;
+      om.classList.remove("open", "show");
+      const subM = om.querySelector(".dropdown-menu, ul");
+      if (subM && !subM.contains(targetEl)) {
+        subM.style.display = "";
+        subM.style.visibility = "";
+      }
+    }
 
     // Detectar si el elemento seleccionado es un botón/pestaña desplegable (Dropdown)
     const isDropdownToggle = targetEl.classList.contains("dropdown-toggle") ||
