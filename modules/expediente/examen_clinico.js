@@ -63,6 +63,14 @@ function normalizeClinicalAcronyms(text) {
   return t;
 }
 
+// Auxiliar para asegurar que los campos de observación y descripción comiencen siempre con mayúscula
+function capitalizeFirstLetter(str) {
+  if (!str || typeof str !== "string") return str;
+  const trimmed = str.trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 // 1. Extraer Ectoscopia
 function extractEctoscopia(text) {
   if (!text) return {};
@@ -88,95 +96,121 @@ function extractEctoscopia(text) {
   }
 
   // Apreciación General + Observación condicional (AREG / AMEG)
-  if (/\b(?:abeg|buen\s+estado\s+general|aparente\s+buen\s+estado)\b/i.test(norm) && !/\bareg|ameg\b/i.test(norm)) {
+  const isAregDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?areg\b/i.test(norm);
+  const isAmegDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?ameg\b/i.test(norm);
+
+  if (isAregDelete) {
+    res.apreciacionGeneral = "AREG";
+    res.obsApreciacionGeneral = "";
+  } else if (isAmegDelete) {
+    res.apreciacionGeneral = "AMEG";
+    res.obsApreciacionGeneral = "";
+  } else if (/\b(?:abeg|buen\s+estado\s+general|aparente\s+buen\s+estado)\b/i.test(norm) && !/\bareg|ameg\b/i.test(norm)) {
     res.apreciacionGeneral = "ABEG";
   } else if (/\bareg\b/i.test(norm) || /\bregular\s+estado\s+general\b/i.test(norm)) {
     res.apreciacionGeneral = "AREG";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areg|areg|regular\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?areg|areg|regular\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
-        .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "");
-      if (!/^paciente\s+con\b/i.test(obs)) {
-        obs = obs.replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      }
-      if (obs.length > 2) res.obsApreciacionGeneral = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areg\b/i.test(norm)) {
+        .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsApreciacionGeneral = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?areg\b/i.test(norm)) {
       res.focusObservation = "AREG:";
     }
   } else if (/\bameg\b/i.test(norm) || /\bmal\s+estado\s+general\b/i.test(norm)) {
     res.apreciacionGeneral = "AMEG";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameg|ameg|mal\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?ameg|ameg|mal\s+estado\s+general)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:estado\s+nutricional|nutrici[oó]n|aren|amen|aben|hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
-        .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "");
-      if (!/^paciente\s+con\b/i.test(obs)) {
-        obs = obs.replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      }
-      if (obs.length > 2) res.obsApreciacionGeneral = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameg\b/i.test(norm)) {
+        .replace(/^(?:(?:apreciaci[oó]n\s+general|regular\s+estado\s+general|mal\s+estado\s+general|areg|ameg)\s*[,;:]?\s*)+/i, "")
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsApreciacionGeneral = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?ameg\b/i.test(norm)) {
       res.focusObservation = "AMEG:";
     }
   }
 
   // Estado Nutricional + Observación condicional (AREN / AMEN)
-  if (/\b(?:aben|buen\s+estado\s+nutricional|nutrici[oó]n\s+buena|buena\s+nutrici[oó]n)\b/i.test(norm) && !/\baren|amen\b/i.test(norm)) {
+  const isArenDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?aren\b/i.test(norm);
+  const isAmenDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?amen\b/i.test(norm);
+
+  if (isArenDelete) {
+    res.estadoNutricional = "AREN";
+    res.obsEstadoNutricional = "";
+  } else if (isAmenDelete) {
+    res.estadoNutricional = "AMEN";
+    res.obsEstadoNutricional = "";
+  } else if (/\b(?:aben|buen\s+estado\s+nutricional|nutrici[oó]n\s+buena|buena\s+nutrici[oó]n)\b/i.test(norm) && !/\baren|amen\b/i.test(norm)) {
     res.estadoNutricional = "ABEN";
   } else if (/\baren\b/i.test(norm) || /\bregular\s+nutrici[oó]n|regular\s+estado\s+nutricional\b/i.test(norm)) {
     res.estadoNutricional = "AREN";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?aren|aren|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?aren|aren|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:estado\s+nutricional|regular\s+nutrici[oó]n|regular\s+estado\s+nutricional|aren|amen)\s*[,;:]?\s*)+/i, "")
-        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      if (obs.length > 2) res.obsEstadoNutricional = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?aren\b/i.test(norm)) {
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsEstadoNutricional = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?aren\b/i.test(norm)) {
       res.focusObservation = "AREN:";
     }
   } else if (/\bamen\b/i.test(norm) || /\bmal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n\b/i.test(norm)) {
     res.estadoNutricional = "AMEN";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?amen|amen|mal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?amen|amen|mal\s+estado\s+nutricional|desnutrido|desnutrici[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:hidrataci[oó]n|areh|ameh|abeh|lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:estado\s+nutricional|mal\s+estado\s+nutricional|desnutrici[oó]n|aren|amen)\s*[,;:]?\s*)+/i, "")
-        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      if (obs.length > 2) res.obsEstadoNutricional = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?amen\b/i.test(norm)) {
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsEstadoNutricional = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?amen\b/i.test(norm)) {
       res.focusObservation = "AMEN:";
     }
   }
 
   // Estado de Hidratación + Observación condicional (AREH / AMEH)
-  if (/\b(?:abeh|buena\s+hidrataci[oó]n|hidratado|bien\s+hidratado|buen\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm) && !/\bareh|ameh\b/i.test(norm)) {
+  const isArehDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?areh\b/i.test(norm);
+  const isAmehDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?ameh\b/i.test(norm);
+
+  if (isArehDelete) {
+    res.estadoHidratacion = "AREH";
+    res.obsEstadoHidratacion = "";
+  } else if (isAmehDelete) {
+    res.estadoHidratacion = "AMEH";
+    res.obsEstadoHidratacion = "";
+  } else if (/\b(?:abeh|buena\s+hidrataci[oó]n|hidratado|bien\s+hidratado|buen\s+estado\s+de\s+hidrataci[oó]n)\b/i.test(norm) && !/\bareh|ameh\b/i.test(norm)) {
     res.estadoHidratacion = "ABEH";
   } else if (/\bareh\b/i.test(norm) || /\bregular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n\b/i.test(norm)) {
     res.estadoHidratacion = "AREH";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areh|areh|regular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?areh|areh|regular\s+hidrataci[oó]n|regular\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:estado\s+de\s+hidrataci[oó]n|regular\s+hidrataci[oó]n|areh|ameh)\s*[,;:]?\s*)+/i, "")
-        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      if (obs.length > 2) res.obsEstadoHidratacion = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?areh\b/i.test(norm)) {
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsEstadoHidratacion = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?areh\b/i.test(norm)) {
       res.focusObservation = "AREH:";
     }
   } else if (/\bameh\b/i.test(norm) || /\bdeshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n\b/i.test(norm)) {
     res.estadoHidratacion = "AMEH";
-    const mObs = cleanedText.match(/(?:(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameh|ameh|deshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n|(?:el\s+)?paciente|refiere|presenta|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
+    const mObs = cleanedText.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe|poner|anotar|anota|redactar|redacta)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?ameh|ameh|deshidratado|mal\s+hidratado|mal\s+estado\s+de\s+hidrataci[oó]n)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:lucidez|fa[sc]+ies|grado\s+de\s+colaboraci[oó]n|persona\s+con\s+necesidades|peso\s*(?:\(kg\)|es|de|:|\d)|talla\s*(?:\(m\)|es|de|:|\d)|temperatura\s+corporal|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
       let obs = mObs[1].trim()
         .replace(/^(?:(?:estado\s+de\s+hidrataci[oó]n|mal\s+estado\s+de\s+hidrataci[oó]n|deshidratado|areh|ameh)\s*[,;:]?\s*)+/i, "")
-        .replace(/^(?:es|de|con|(?:el\s+)?paciente|observaci[oó]n:?)\s+/i, "");
-      if (obs.length > 2) res.obsEstadoHidratacion = obs;
-    } else if (/\b(?:cambiar|editar|modificar)\s+(?:observaci[oó]n\s+)?ameh\b/i.test(norm)) {
+        .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+      if (obs.length > 2) res.obsEstadoHidratacion = capitalizeFirstLetter(obs);
+    } else if (/\b(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?ameh\b/i.test(norm)) {
       res.focusObservation = "AMEH:";
     }
   }
 
-  // Lucidez y Orientación (Checkbox)
-  if (/\b(?:marcar\s+lucidez|lucidez\s+y\s+orientaci[oó]n\s+(?:s[ií]|check)|lucidez\s+s[ií]|lotep|l[uú]cido\s+y\s+orientado|l[uú]cido|orientado)\b/i.test(norm)) {
-    res.lucidez = "true";
-  } else if (/\b(?:desmarcar\s+lucidez|lucidez\s+y\s+orientaci[oó]n\s+no|lucidez\s+no|no\s+l[uú]cido|no\s+orientado)\b/i.test(norm)) {
+  // Lucidez y Orientación (Checkbox: marcar, seleccionar, check / desmarcar, quitar check, no)
+  const IS_LUCIDEZ_UNCHECK = /\b(?:(?:desmarca|desmarcar|deselecciona|deseleccionar|quita|quitar|qu[ií]tale)(?:\s+(?:el\s+)?check)?(?:\s+(?:a|en|de))?\s+(?:la\s+)?lucidez|sin\s+check(?:\s+(?:a|en|de))?\s+(?:la\s+)?lucidez|lucidez\s+y\s+orientaci[oó]n\s+(?:no|sin\s+check|desmarcad[ao]|inactivo)|lucidez\s+(?:no|sin\s+check|desmarcad[ao])|no\s+l[uú]cido|no\s+orientado)\b/i;
+  const IS_LUCIDEZ_CHECK = /\b(?:(?:marca|marcar|selecciona|seleccionar|pon|poner|ponle|coloca|colocar|col[oó]cale)(?:\s+(?:el\s+)?check)?(?:\s+(?:a|en|de))?\s+(?:la\s+)?lucidez|lucidez\s+y\s+orientaci[oó]n(?:\s+(?:con\s+check|s[ií]|check|marcado|marcar|activo))?|lucidez\s+(?:s[ií]|check|marcada?|activa?)|lotep|l[uú]cido\s+y\s+orientado|l[uú]cido|orientado)\b/i;
+
+  if (IS_LUCIDEZ_UNCHECK.test(norm)) {
     res.lucidez = "false";
+  } else if (IS_LUCIDEZ_CHECK.test(norm)) {
+    res.lucidez = "true";
   }
 
   // Persona con Necesidades Especiales (Si / No)
@@ -251,19 +285,28 @@ function extractPielAnexos(text) {
   const res = {};
 
   // Temperatura de piel (Normal, Aumentada, Disminuida) + Observación condicional
-  if (/\btemperatura\s+(?:de\s+piel\s+)?normal\b|\bpiel\s+normot[eé]rmica\b/i.test(norm)) {
+  const isAumentadaDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?aumentada\b/i.test(norm);
+  const isDisminuidaDelete = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?disminuida\b/i.test(norm);
+
+  if (isAumentadaDelete) {
+    res.temperaturaPiel = "Aumentada";
+    res.obsTemperaturaPiel = "";
+  } else if (isDisminuidaDelete) {
+    res.temperaturaPiel = "Disminuida";
+    res.obsTemperaturaPiel = "";
+  } else if (/\btemperatura\s+(?:de\s+piel\s+)?normal\b|\bpiel\s+normot[eé]rmica\b/i.test(norm)) {
     res.temperaturaPiel = "Normal";
   } else if (/\btemperatura\s+(?:de\s+piel\s+)?aumentada\b|\bpiel\s+caliente\b/i.test(norm)) {
     res.temperaturaPiel = "Aumentada";
-    const mObs = text.match(/(?:temperatura\s+(?:de\s+piel\s+)?aumentada|piel\s+caliente)(?:\s*[,;:]\s*|\s+(?:observaci[oó]n:?|debido\s+a|presenta)?\s*)(.+?)(?=(?:,\s*)?(?:lesiones|anexos|temperatura\s+corporal|frecuencia|pulso|presi[oó]n|confirmar|$))/i);
+    const mObs = text.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?aumentada|temperatura\s+(?:de\s+piel\s+)?aumentada|piel\s+caliente)(?:\s*[,;:]\s*|\s+(?:observaci[oó]n:?|descripci[oó]n:?|debido\s+a|presenta)?\s*)(.+?)(?=(?:,\s*)?(?:lesiones|anexos|temperatura\s+corporal|frecuencia|pulso|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      res.obsTemperaturaPiel = mObs[1].trim().replace(/^observaci[oó]n:?\s*/i, "");
+      res.obsTemperaturaPiel = capitalizeFirstLetter(mObs[1].trim().replace(/^observaci[oó]n:?\s*/i, ""));
     }
   } else if (/\btemperatura\s+(?:de\s+piel\s+)?disminuida\b|\bpiel\s+fr[ií]a\b|\bfrialdad\b/i.test(norm)) {
     res.temperaturaPiel = "Disminuida";
-    const mObs = text.match(/(?:temperatura\s+(?:de\s+piel\s+)?disminuida|piel\s+fr[ií]a|frialdad)(?:\s*[,;:]\s*|\s+(?:observaci[oó]n:?|debido\s+a|presenta)?\s*)(.+?)(?=(?:,\s*)?(?:lesiones|anexos|temperatura\s+corporal|frecuencia|pulso|presi[oó]n|confirmar|$))/i);
+    const mObs = text.match(/(?:(?:cambiar|cambia|editar|edita|modificar|modifica|escribir|escribe)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?disminuida|temperatura\s+(?:de\s+piel\s+)?disminuida|piel\s+fr[ií]a|frialdad)(?:\s*[,;:]\s*|\s+(?:observaci[oó]n:?|descripci[oó]n:?|debido\s+a|presenta)?\s*)(.+?)(?=(?:,\s*)?(?:lesiones|anexos|temperatura\s+corporal|frecuencia|pulso|presi[oó]n|confirmar|$))/i);
     if (mObs && mObs[1].trim().length > 2) {
-      res.obsTemperaturaPiel = mObs[1].trim().replace(/^observaci[oó]n:?\s*/i, "");
+      res.obsTemperaturaPiel = capitalizeFirstLetter(mObs[1].trim().replace(/^observaci[oó]n:?\s*/i, ""));
     }
   }
 
@@ -326,7 +369,7 @@ function extractFuncionesVitales(text) {
   // Observación (limpieza estricta de prefijos como "la observación sería que...")
   const mObs = text.match(/(?:la\s+observaci[oó]n\s+(?:ser[ií]a|es|dice)?\s*(?:que)?|en\s+observaci[oó]n\s*(?:coloca|pon|escribe)?\s*(?:que)?|observaci[oó]n\s*[:=]\s*(?:que)?)\s*(.+?)(?=(?:,\s*)?(?:confirmar|$))/i);
   if (mObs && mObs[1].trim().length > 2) {
-    res.observacion = mObs[1].trim().replace(/^(?:que|el\s+paciente\s+presenta\s+ser[ií]a\s+que)\s+/i, "");
+    res.observacion = capitalizeFirstLetter(mObs[1].trim().replace(/^(?:que|el\s+paciente\s+presenta\s+ser[ií]a\s+que)\s+/i, ""));
   }
 
   return res;
@@ -348,7 +391,7 @@ function extractEstomatologico(text) {
       let desc = mDesc[1].trim()
         .replace(/^(?:(?:la\s+)?descripci[oó]n\s+(?:de\s+respiraci[oó]n\s+)?(?:es|ser[ií]a)?\s*)+/i, "")
         .replace(/^(?:la\s+siguiente|que|es|describa:?)\s+/i, "");
-      if (desc.length > 2) res.describaRespiracion = desc;
+      if (desc.length > 2) res.describaRespiracion = capitalizeFirstLetter(desc);
     }
   } else if (/\bla\s+descripci[oó]n\s+de\s+respiraci[oó]n\s+es\s+(?:la\s+siguiente|que)?\s*(.+)/i.test(text)) {
     const mDesc = text.match(/\bla\s+descripci[oó]n\s+de\s+respiraci[oó]n\s+es\s+(?:la\s+siguiente|que)?\s*(.+)/i);
@@ -356,7 +399,7 @@ function extractEstomatologico(text) {
       let desc = mDesc[1].trim()
         .replace(/^(?:(?:la\s+)?descripci[oó]n\s+(?:de\s+respiraci[oó]n\s+)?(?:es|ser[ií]a)?\s*)+/i, "")
         .replace(/^(?:la\s+siguiente|que|es|describa:?)\s+/i, "");
-      if (desc.length > 2) res.describaRespiracion = desc;
+      if (desc.length > 2) res.describaRespiracion = capitalizeFirstLetter(desc);
     }
   }
 
@@ -370,7 +413,7 @@ function extractEstomatologico(text) {
       let desc = mDesc[1].trim()
         .replace(/^(?:(?:la\s+)?descripci[oó]n\s+(?:de\s+otros\s+h[aá]bitos\s+)?(?:es|ser[ií]a)?\s*)+/i, "")
         .replace(/^(?:la\s+siguiente|que|es|describa:?)\s+/i, "");
-      if (desc.length > 2) res.describaOtrosHabitos = desc;
+      if (desc.length > 2) res.describaOtrosHabitos = capitalizeFirstLetter(desc);
     }
   } else if (/\bla\s+descripci[oó]n\s+de\s+otros\s+h[aá]bitos\s+es\s*(.+)/i.test(text)) {
     const mDesc = text.match(/\bla\s+descripci[oó]n\s+de\s+otros\s+h[aá]bitos\s+es\s*(.+)/i);
@@ -378,7 +421,7 @@ function extractEstomatologico(text) {
       let desc = mDesc[1].trim()
         .replace(/^(?:(?:la\s+)?descripci[oó]n\s+(?:de\s+otros\s+h[aá]bitos\s+)?(?:es|ser[ií]a)?\s*)+/i, "")
         .replace(/^(?:la\s+siguiente|que|es|describa:?)\s+/i, "");
-      if (desc.length > 2) res.describaOtrosHabitos = desc;
+      if (desc.length > 2) res.describaOtrosHabitos = capitalizeFirstLetter(desc);
     }
   }
 
@@ -428,10 +471,10 @@ function extractInteractiveLesionCommand(text) {
     return { action: "cerrar_modal_lesiones" };
   }
 
-  // Eliminar tabla / tarjeta
-  const mDel = norm.match(/(?:eliminar|borrar|quitar)\s+(?:tabla|lesi[oó]n)?\s*(.+)/i);
+  // Eliminar tabla / tarjeta en imagen interactiva (requiere palabra tabla o lesión)
+  const mDel = norm.match(/(?:eliminar|borrar|quitar)\s+(?:la\s+)?(?:tabla|lesi[oó]n)(?:\s+(?:de|en))?\s+([a-z\s]+)/i);
   if (mDel) {
-    const reg = mDel[1].replace(/^(?:de|en|la)?\s*/i, "").trim();
+    const reg = mDel[1].trim();
     if (reg.length > 2) {
       return { action: "eliminar_lesion", region: reg };
     }
@@ -487,8 +530,8 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/apreciaci[oó]n\s+general/i);
     if (f) entries.push({ field: f, valor: ecto.apreciacionGeneral });
   }
-  if (ecto.obsApreciacionGeneral) {
-    const targetLabel = ecto.apreciacionGeneral === "AMEG" ? /^ameg:?$/i : /^areg:?$/i;
+  if (ecto.obsApreciacionGeneral !== undefined) {
+    const targetLabel = (ecto.apreciacionGeneral === "AMEG" || /^ameg/i.test(normalizedText)) ? /^ameg:?$/i : /^areg:?$/i;
     const f = findF(targetLabel);
     if (f) entries.push({ field: f, valor: ecto.obsApreciacionGeneral });
   }
@@ -496,8 +539,8 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/nutricional/i);
     if (f) entries.push({ field: f, valor: ecto.estadoNutricional });
   }
-  if (ecto.obsEstadoNutricional) {
-    const targetLabel = ecto.estadoNutricional === "AMEN" ? /^amen:?$/i : /^aren:?$/i;
+  if (ecto.obsEstadoNutricional !== undefined) {
+    const targetLabel = (ecto.estadoNutricional === "AMEN" || /^amen/i.test(normalizedText)) ? /^amen:?$/i : /^aren:?$/i;
     const f = findF(targetLabel);
     if (f) entries.push({ field: f, valor: ecto.obsEstadoNutricional });
   }
@@ -505,12 +548,12 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/hidrataci[oó]n/i);
     if (f) entries.push({ field: f, valor: ecto.estadoHidratacion });
   }
-  if (ecto.obsEstadoHidratacion) {
-    const targetLabel = ecto.estadoHidratacion === "AMEH" ? /^ameh:?$/i : /^areh:?$/i;
+  if (ecto.obsEstadoHidratacion !== undefined) {
+    const targetLabel = (ecto.estadoHidratacion === "AMEH" || /^ameh/i.test(normalizedText)) ? /^ameh:?$/i : /^areh:?$/i;
     const f = findF(targetLabel);
     if (f) entries.push({ field: f, valor: ecto.obsEstadoHidratacion });
   }
-  if (ecto.lucidez) {
+  if (ecto.lucidez !== undefined) {
     const f = findF(/lucidez/i);
     if (f) entries.push({ field: f, valor: ecto.lucidez });
   }
@@ -546,8 +589,8 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/^temperatura$/i, /piel/i) || findF(/temperatura\s*\(piel/i);
     if (f) entries.push({ field: f, valor: piel.temperaturaPiel });
   }
-  if (piel.obsTemperaturaPiel) {
-    const targetLabel = piel.temperaturaPiel === "Disminuida" ? /^disminuida:?$/i : /^aumentada:?$/i;
+  if (piel.obsTemperaturaPiel !== undefined) {
+    const targetLabel = (piel.temperaturaPiel === "Disminuida" || /disminuida/i.test(normalizedText)) ? /^disminuida:?$/i : /^aumentada:?$/i;
     const f = findF(targetLabel);
     if (f) entries.push({ field: f, valor: piel.obsTemperaturaPiel });
   }

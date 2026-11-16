@@ -600,20 +600,55 @@ function dentaiFill(items) {
 
       } else if (el.type === "checkbox" || el.type === "radio") {
         const want = /^(true|si|sí|1|marcado)$/i.test(String(it.valor).trim());
+        const wrapper = el.closest('[class*="icheckbox"], [class*="iradio"], [class*="custom-control"], .checkbox') || el.parentElement;
+
         if (el.checked !== want) {
           el.checked = want;
-          if (el.parentElement && el.parentElement.classList.contains("icheckbox")) {
-            el.parentElement.click();
+          if (want) el.setAttribute("checked", "checked");
+          else el.removeAttribute("checked");
+        }
+
+        // 1. Manejo visual de iCheck / Bootstrap de Smile
+        if (wrapper) {
+          if (want) {
+            wrapper.classList.add("checked");
+          } else {
+            wrapper.classList.remove("checked");
+          }
+          const helper = wrapper.querySelector(".iCheck-helper, ins");
+          if (helper) {
+            try { helper.click(); } catch (e) {}
           }
         }
+
+        // 2. Ejecutar plugin jQuery iCheck en el contexto de página de Smile si está presente
         try {
-          const jq = window.jQuery || window.$;
-          if (typeof jq === "function") {
-            jq(el).iCheck(want ? 'check' : 'uncheck');
-            jq(el).prop('checked', want).trigger(want ? 'ifChecked' : 'ifUnchecked').trigger('change');
-          }
+          const scr = document.createElement("script");
+          scr.textContent = `(function() {
+            try {
+              var el = document.querySelector('[data-dentai-key="${esc(it.key)}"]') || (document.getElementById("${esc(el.id || "")}"));
+              if (el) {
+                var jq = window.jQuery || window.$;
+                if (jq && typeof jq.fn.iCheck === "function") {
+                  jq(el).iCheck(${want ? "'check'" : "'uncheck'"});
+                  jq(el).prop('checked', ${want}).trigger('change');
+                }
+              }
+            } catch (err) {}
+          })();`;
+          (document.head || document.documentElement).appendChild(scr);
+          scr.remove();
         } catch (e) {}
+
         fire(el);
+        try {
+          el.dispatchEvent(new Event("ifChanged", { bubbles: true }));
+          el.dispatchEvent(new Event(want ? "ifChecked" : "ifUnchecked", { bubbles: true }));
+        } catch (e) {}
+
+        mark(wrapper || el);
+        results.push({ key: it.key, ok: true });
+        continue;
       } else if (el.isContentEditable && tag !== "input" && tag !== "textarea") {
         el.focus();
         document.execCommand("selectAll", false);
@@ -637,6 +672,13 @@ function dentaiFill(items) {
         } else if (/documento|dni|celular|tel|telefono/i.test(etiq) && !/tipo/i.test(etiq)) {
           // Documentos y teléfonos deben ser exclusivamente dígitos numéricos
           finalVal = finalVal.replace(/[^0-9]/g, "").trim();
+        }
+
+        // Si es campo de observación o descripción clínica, asegurar primera letra con mayúscula
+        if (/areg|ameg|aren|amen|areh|ameh|aumentada|disminuida|describa|observaci/i.test(etiq)) {
+          if (finalVal.length > 0) {
+            finalVal = finalVal.charAt(0).toUpperCase() + finalVal.slice(1);
+          }
         }
 
         el.focus();

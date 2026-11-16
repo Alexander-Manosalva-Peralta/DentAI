@@ -93,23 +93,23 @@ test("ectoscopia: AREG y AMEG capturan observación en su campo correspondiente"
   const pAreg = s.propose("apreciación general AREG regular estado general, paciente con palidez marcada");
   assert.equal(pAreg.handled, true);
   assert.equal(pAreg.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
-  assert.equal(pAreg.entries.find((e) => e.field.etiqueta === "AREG:").valor, "paciente con palidez marcada");
+  assert.equal(pAreg.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Paciente con palidez marcada");
 
   const pAmeg = s.propose("apreciación general AMEG paciente postrado en cama");
   assert.equal(pAmeg.handled, true);
   assert.equal(pAmeg.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AMEG");
-  assert.equal(pAmeg.entries.find((e) => e.field.etiqueta === "AMEG:").valor, "postrado en cama");
+  assert.equal(pAmeg.entries.find((e) => e.field.etiqueta === "AMEG:").valor, "Paciente postrado en cama");
 });
 
 test("nutrición e hidratación: AREN, AMEN, AREH y AMEH capturan observaciones", (t) => {
   const s = setup(); t.after(s.close);
   const pNut = s.propose("estado nutricional AREN baja de peso progresiva");
   assert.equal(pNut.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "AREN");
-  assert.equal(pNut.entries.find((e) => e.field.etiqueta === "AREN:").valor, "baja de peso progresiva");
+  assert.equal(pNut.entries.find((e) => e.field.etiqueta === "AREN:").valor, "Baja de peso progresiva");
 
   const pHid = s.propose("estado de hidratación AMEH mucosas deshidratadas");
   assert.equal(pHid.entries.find((e) => e.field.etiqueta.includes("Hidratación")).valor, "AMEH");
-  assert.equal(pHid.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "mucosas deshidratadas");
+  assert.equal(pHid.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "Mucosas deshidratadas");
 });
 
 test("lucidez y orientación: marca y desmarca el checkbox", (t) => {
@@ -172,11 +172,11 @@ test("temperatura en piel y anexos: aumentada y disminuida capturan observación
   const s = setup(); t.after(s.close);
   const pAum = s.propose("temperatura aumentada piel caliente al tacto");
   assert.equal(pAum.entries.find((e) => e.field.etiqueta === "Temperatura (Piel y Anexos)").valor, "Aumentada");
-  assert.equal(pAum.entries.find((e) => e.field.etiqueta === "Aumentada:").valor, "piel caliente al tacto");
+  assert.equal(pAum.entries.find((e) => e.field.etiqueta === "Aumentada:").valor, "Piel caliente al tacto");
 
   const pDis = s.propose("temperatura disminuida frialdad distal");
   assert.equal(pDis.entries.find((e) => e.field.etiqueta === "Temperatura (Piel y Anexos)").valor, "Disminuida");
-  assert.equal(pDis.entries.find((e) => e.field.etiqueta === "Disminuida:").valor, "frialdad distal");
+  assert.equal(pDis.entries.find((e) => e.field.etiqueta === "Disminuida:").valor, "Frialdad distal");
 });
 
 test("funciones vitales: limpia el prefijo de observación", (t) => {
@@ -187,7 +187,7 @@ test("funciones vitales: limpia el prefijo de observación", (t) => {
   assert.equal(p.entries.find((e) => e.field.etiqueta.includes("Pulso")).valor, "72");
   assert.equal(p.entries.find((e) => e.field.etiqueta.includes("Presión arterial")).valor, "120/80");
   const obs = p.entries.find((e) => e.field.etiqueta.includes("Observación")).valor;
-  assert.equal(obs, "el paciente no tomó su medicación");
+  assert.equal(obs, "El paciente no tomó su medicación");
   assert.ok(!obs.includes("la observación sería que"), "No debe incluir el prefijo");
 });
 
@@ -195,9 +195,9 @@ test("estomatológico extraoral: respiración y otros hábitos diferencian sus c
   const s = setup(); t.after(s.close);
   const p = s.propose("respiración bucal la descripción de respiración es respira con boca abierta, otros hábitos presentes describa onicofagia y bruxismo");
   assert.equal(p.entries.find((e) => e.field.etiqueta === "Respiración").valor, "Bucal");
-  assert.equal(p.entries.find((e) => e.field.etiqueta === "Describa (Respiración)").valor, "respira con boca abierta");
+  assert.equal(p.entries.find((e) => e.field.etiqueta === "Describa (Respiración)").valor, "Respira con boca abierta");
   assert.equal(p.entries.find((e) => e.field.etiqueta === "Otros hábitos").valor, "Presentes");
-  assert.equal(p.entries.find((e) => e.field.etiqueta === "Describa (Otros hábitos)").valor, "onicofagia y bruxismo");
+  assert.equal(p.entries.find((e) => e.field.etiqueta === "Describa (Otros hábitos)").valor, "Onicofagia y bruxismo");
 });
 
 test("comandos interactivos para modal de lesiones", (t) => {
@@ -270,22 +270,22 @@ test("cambiar y editar observaciones condicionales directamente", (t) => {
   const pCambiar = s.propose("cambiar AREG calidez neutral");
   assert.equal(pCambiar.handled, true);
   assert.equal(pCambiar.entries.find((e) => e.field.etiqueta === "Apreciación General").valor, "AREG");
-  assert.equal(pCambiar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "calidez neutral");
+  assert.equal(pCambiar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Calidez neutral");
 
   // "editar AREG calidez neutral"
   const pEditar = s.propose("editar AREG calidez neutral");
   assert.equal(pEditar.handled, true);
-  assert.equal(pEditar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "calidez neutral");
+  assert.equal(pEditar.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Calidez neutral");
 
   // "cambiar AREN baja de peso progresiva"
   const pAren = s.propose("cambiar AREN baja de peso progresiva");
   assert.equal(pAren.handled, true);
-  assert.equal(pAren.entries.find((e) => e.field.etiqueta === "AREN:").valor, "baja de peso progresiva");
+  assert.equal(pAren.entries.find((e) => e.field.etiqueta === "AREN:").valor, "Baja de peso progresiva");
 
   // "editar AMEH mucosas deshidratadas"
   const pAmeh = s.propose("editar AMEH mucosas deshidratadas");
   assert.equal(pAmeh.handled, true);
-  assert.equal(pAmeh.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "mucosas deshidratadas");
+  assert.equal(pAmeh.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "Mucosas deshidratadas");
 
   // "cambiar AREG a ABEG"
   const pSwap = s.propose("cambiar AREG a ABEG");
@@ -343,4 +343,89 @@ test("dictado continuo rápido y fonética de voz (amej, ameja, areja, a reja, a
 
   // Normalizador a nivel de función para 'listo confirmar'
   assert.equal(s.w.normalizeClinicalAcronyms("listo confirmar"), "confirmar");
+});
+
+test("marcar, seleccionar y desmarcar Lucidez y Orientación con check visual", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "marca lucidez y orientación"
+  const pMarca = s.propose("marca lucidez y orientación");
+  assert.equal(pMarca.handled, true);
+  assert.equal(pMarca.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "true");
+
+  // "selecciona lucidez y orientación"
+  const pSel = s.propose("selecciona lucidez y orientación");
+  assert.equal(pSel.handled, true);
+  assert.equal(pSel.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "true");
+
+  // "colócale el check a lucidez y orientación"
+  const pColocale = s.propose("colócale el check a lucidez y orientación");
+  assert.equal(pColocale.handled, true);
+  assert.equal(pColocale.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "true");
+
+  // "desmarca lucidez y orientación"
+  const pDesmarca = s.propose("desmarca lucidez y orientación");
+  assert.equal(pDesmarca.handled, true);
+  assert.equal(pDesmarca.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "false");
+
+  // "quítale el check a lucidez y orientación"
+  const pQuitale = s.propose("quítale el check a lucidez y orientación");
+  assert.equal(pQuitale.handled, true);
+  assert.equal(pQuitale.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "false");
+
+  // Llenado en DOM y verificación de checked
+  s.w.dentaiFill(s.items("colócale el check a lucidez y orientación"));
+  assert.equal(s.w.document.getElementById("lucidez_chk").checked, true);
+
+  s.w.dentaiFill(s.items("desmarca lucidez y orientación"));
+  assert.equal(s.w.document.getElementById("lucidez_chk").checked, false);
+});
+
+test("escribir y borrar en campos condicionales con mayúscula inicial siempre", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "escribe en AREG paciente pálido"
+  const pEscribeAreg = s.propose("escribe en AREG paciente pálido");
+  assert.equal(pEscribeAreg.handled, true);
+  assert.equal(pEscribeAreg.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Paciente pálido");
+
+  // "escribir dentro de AREG calidez neutral"
+  const pDentroAreg = s.propose("escribir dentro de AREG calidez neutral");
+  assert.equal(pDentroAreg.handled, true);
+  assert.equal(pDentroAreg.entries.find((e) => e.field.etiqueta === "AREG:").valor, "Calidez neutral");
+
+  // "escribe en AMEG mucosas deshidratadas 2.0"
+  const pEscribeAmeg = s.propose("escribe en AMEG mucosas deshidratadas 2.0");
+  assert.equal(pEscribeAmeg.handled, true);
+  assert.equal(pEscribeAmeg.entries.find((e) => e.field.etiqueta === "AMEG:").valor, "Mucosas deshidratadas 2.0");
+
+  // "borrar AREG"
+  const pBorrarAreg = s.propose("borrar AREG");
+  assert.equal(pBorrarAreg.handled, true);
+  assert.equal(pBorrarAreg.entries.find((e) => e.field.etiqueta === "AREG:").valor, "");
+
+  // "borrar descripción de AREG"
+  const pBorrarDesc = s.propose("borrar descripción de AREG");
+  assert.equal(pBorrarDesc.handled, true);
+  assert.equal(pBorrarDesc.entries.find((e) => e.field.etiqueta === "AREG:").valor, "");
+
+  // "borrar AREN"
+  const pBorrarAren = s.propose("borrar AREN");
+  assert.equal(pBorrarAren.handled, true);
+  assert.equal(pBorrarAren.entries.find((e) => e.field.etiqueta === "AREN:").valor, "");
+
+  // "borrar AMEH"
+  const pBorrarAmeh = s.propose("borrar AMEH");
+  assert.equal(pBorrarAmeh.handled, true);
+  assert.equal(pBorrarAmeh.entries.find((e) => e.field.etiqueta === "AMEH:").valor, "");
+
+  // Verificación en DOM con dentaiFill: texto en minúscula debe convertirse a mayúscula inicial
+  s.w.document.querySelector('[name="apreciacion_general"]').value = "AREG";
+  s.w.document.getElementById("renglon_areg").style.display = "";
+  s.w.dentaiFill(s.items("escribe en AREG paciente pálido"));
+  assert.equal(s.w.document.querySelector('[name="areg_obs"]').value, "Paciente pálido");
+
+  // Borrar en DOM
+  s.w.dentaiFill(s.items("borrar AREG"));
+  assert.equal(s.w.document.querySelector('[name="areg_obs"]').value, "");
 });
