@@ -354,6 +354,17 @@ function dentaiScan(anamnesisFields = []) {
       if (tag === "select" && /^temperatura$/i.test(lbl.trim())) {
         entry.etiqueta = "Temperatura (Piel y Anexos)";
       }
+      // Desambiguar Observación (General / Funciones Vitales vs Conclusión / Final)
+      if (/^observaci[oó]n:?$/i.test(lbl.trim())) {
+        const isConclusion = /conclusi[oó]n|final/i.test(entry.seccion) ||
+                             /conclusi[oó]n|final/i.test((el.name || "") + " " + (el.id || ""));
+        if (isConclusion) {
+          entry.etiqueta = "Observación (Conclusión)";
+          entry.dependsOn = "conclusion";
+        } else {
+          entry.etiqueta = "Observación General";
+        }
+      }
       if (/^areg:?$/i.test(lbl)) { entry.etiqueta = "AREG:"; entry.dependsOn = "apreciacion_general"; }
       if (/^ameg:?$/i.test(lbl)) { entry.etiqueta = "AMEG:"; entry.dependsOn = "apreciacion_general"; }
       if (/^aren:?$/i.test(lbl)) { entry.etiqueta = "AREN:"; entry.dependsOn = "estado_nutricional"; }
@@ -606,11 +617,10 @@ function dentaiFill(items) {
         const want = /^(true|si|sí|1|marcado)$/i.test(String(it.valor).trim());
         const wrapper = el.closest('[class*="icheckbox"], [class*="iradio"], [class*="custom-control"], .checkbox') || el.parentElement;
 
-        if (el.checked !== want) {
-          el.checked = want;
-          if (want) el.setAttribute("checked", "checked");
-          else el.removeAttribute("checked");
-        }
+        const wasChecked = Boolean(el.checked);
+        el.checked = want;
+        if (want) el.setAttribute("checked", "checked");
+        else el.removeAttribute("checked");
 
         // 1. Manejo visual de iCheck / Bootstrap de Smile
         if (wrapper) {
@@ -618,10 +628,6 @@ function dentaiFill(items) {
             wrapper.classList.add("checked");
           } else {
             wrapper.classList.remove("checked");
-          }
-          const helper = wrapper.querySelector(".iCheck-helper, ins");
-          if (helper) {
-            try { helper.click(); } catch (e) {}
           }
         }
 
@@ -636,6 +642,9 @@ function dentaiFill(items) {
                 if (jq && typeof jq.fn.iCheck === "function") {
                   jq(el).iCheck(${want ? "'check'" : "'uncheck'"});
                   jq(el).prop('checked', ${want}).trigger('change');
+                } else if (${wasChecked !== want}) {
+                  el.checked = ${want};
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
                 }
               }
             } catch (err) {}
@@ -1713,6 +1722,63 @@ function dentaiHandleInteractiveLesion(cmd) {
   if (!cmd || !cmd.action) return { ok: false };
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+  // Helper para buscar tarjetas en el panel lateral del modal interactivo
+  const modal = document.querySelector(".modal, .dialog, div[role=dialog], #modal_lesion, #modal_lesiones, .modal-content, .modal-body") || document.body;
+
+  function getAllCards() {
+    const selects = Array.from(modal.querySelectorAll("select"));
+    const cards = [];
+    for (const sel of selects) {
+      const card = sel.closest(".card, tr, table, .panel, .form-group, div[style*='border'], div") || sel.parentElement;
+      if (card && !cards.includes(card)) cards.push(card);
+    }
+    return cards;
+  }
+
+  function findCardForRegion(targetRegion) {
+    if (!targetRegion) return null;
+    const rNorm = norm(targetRegion).replace("perineal", "perinal").replace("optica", "otica");
+    const cards = getAllCards();
+    return cards.find((c) => {
+      const inputs = Array.from(c.querySelectorAll("input, span, label, td"));
+      return inputs.some((inp) => {
+        const v = norm(inp.value || inp.textContent || "");
+        return v.includes(rNorm) || rNorm.includes(v);
+      });
+    });
+  }
+
+  function findCommentField(card) {
+    if (!card) return null;
+    const ta = card.querySelector("textarea");
+    if (ta) return ta;
+    const inputs = Array.from(card.querySelectorAll("input:not([type=button]):not([type=submit]):not([readonly])"));
+    // Excluir input que contiene el nombre de la región anatómica ("En: Dorsal")
+    return inputs.find((inp) => !inp.readOnly && !inp.disabled && inp.name !== "en" && inp.id !== "en");
+  }
+
+  function setSelectValue(select, lesionName) {
+    if (!select || !lesionName) return false;
+    const lesNorm = norm(lesionName);
+    const opt = Array.from(select.options).find((o) => {
+      const t = norm(o.text || o.innerText || o.value || "");
+      return t === lesNorm || t.includes(lesNorm) || lesNorm.includes(t);
+    });
+    if (opt) {
+      select.value = opt.value;
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      try {
+        const scr = document.createElement("script");
+        scr.textContent = `(function(){ try { if (window.jQuery) window.jQuery("select").trigger("change"); }catch(e){} })();`;
+        (document.head || document.documentElement).appendChild(scr);
+        scr.remove();
+      } catch(e) {}
+      return true;
+    }
+    return false;
+  }
+
   // 1. Abrir modal interactivo pulsando el botón "Editar" de Lesiones Anterior o Posterior
   if (cmd.action === "abrir_modal_lesiones") {
     const isPost = cmd.target === "posterior";
@@ -1756,14 +1822,8 @@ function dentaiHandleInteractiveLesion(cmd) {
 
   // 3. Eliminar tarjeta de lesión por región
   if (cmd.action === "eliminar_lesion") {
-    const targetReg = norm(cmd.region);
-    const modal = document.querySelector(".modal, .dialog, div[role=dialog]") || document.body;
-    const cards = Array.from(modal.querySelectorAll(".card, table, tr, div"))
-      .filter((d) => {
-        const inputs = Array.from(d.querySelectorAll("input"));
-        return inputs.some((inp) => norm(inp.value).includes(targetReg));
-      });
-    for (const card of cards) {
+    const card = findCardForRegion(cmd.region);
+    if (card) {
       const delBtn = Array.from(card.querySelectorAll("button, a, span, .btn"))
         .find((el) => norm(el.textContent).includes("eliminar"));
       if (delBtn) {
@@ -1774,58 +1834,186 @@ function dentaiHandleInteractiveLesion(cmd) {
     return { ok: false, motivo: `No se encontró la tabla de lesión para "${cmd.region}".` };
   }
 
-  // 4. Asignar lesión en región anatómica
-  if (cmd.action === "asignar_lesion") {
-    const targetReg = norm(cmd.region);
-    const modal = document.querySelector(".modal, .dialog, div[role=dialog]") || document.body;
-
-    // Buscar punto interactivo en la imagen anatómica
-    const candidates = Array.from(modal.querySelectorAll("area, svg *, div, span, a, [data-region]"))
+  // 4. Seleccionar punto / región anatómica en el gráfico interactivo
+  if (cmd.action === "seleccionar_region") {
+    const rNorm = norm(cmd.region).replace("perineal", "perinal").replace("optica", "otica");
+    const candidates = Array.from(modal.querySelectorAll("circle, text, tspan, path, area, a, span, div, [data-region]"))
       .filter((el) => {
-        const t = norm(el.textContent || el.getAttribute("alt") || el.getAttribute("title") || el.getAttribute("data-region") || "");
-        return t === targetReg || t.includes(targetReg);
+        const t = norm(el.textContent || el.getAttribute("alt") || el.getAttribute("title") || el.getAttribute("data-region") || el.id || "");
+        return t === rNorm || t.includes(rNorm);
       });
     if (candidates.length > 0) {
-      candidates[0].click();
-      candidates[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-      candidates[0].dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      const targetEl = candidates[0];
+      targetEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      targetEl.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      targetEl.click();
+      return { ok: true, msg: `Punto "${cmd.region}" seleccionado en gráfico.` };
+    }
+    return { ok: false, motivo: `No se encontró el punto "${cmd.region}" en la imagen anatómica.` };
+  }
+
+  // 5. Asignar tipo de lesión (y opcionalmente comentario)
+  if (cmd.action === "asignar_lesion") {
+    let card = null;
+    if (cmd.region) {
+      card = findCardForRegion(cmd.region);
+    }
+    if (!card) {
+      const cards = getAllCards();
+      if (cmd.cardIndex !== undefined && cards[cmd.cardIndex]) {
+        card = cards[cmd.cardIndex];
+      } else {
+        // Usar tarjeta sin lesión seleccionada o la última tarjeta activa
+        card = cards.find((c) => {
+          const sel = c.querySelector("select");
+          return sel && !sel.value;
+        }) || cards[cards.length - 1];
+      }
     }
 
-    setTimeout(() => {
-      const cards = Array.from(modal.querySelectorAll("div, table, .card"))
-        .filter((d) => {
-          const inputs = Array.from(d.querySelectorAll("input"));
-          return inputs.some((inp) => norm(inp.value).includes(targetReg)) || d.querySelector("select");
+    if (!card && cmd.region) {
+      // Intentar hacer clic en el gráfico anatómico primero para crear la tarjeta
+      const rNorm = norm(cmd.region).replace("perineal", "perinal").replace("optica", "otica");
+      const candidate = Array.from(modal.querySelectorAll("circle, text, tspan, path, area, a, span, div, [data-region]"))
+        .find((el) => {
+          const t = norm(el.textContent || el.getAttribute("alt") || el.getAttribute("title") || el.getAttribute("data-region") || el.id || "");
+          return t === rNorm || t.includes(rNorm);
         });
-      const card = cards[cards.length - 1];
-      if (card) {
-        if (cmd.lesion) {
-          const select = card.querySelector("select");
-          if (select) {
-            const lesNorm = norm(cmd.lesion);
-            const opt = Array.from(select.options).find((o) => norm(o.text || o.value).includes(lesNorm));
-            if (opt) {
-              select.value = opt.value;
-              select.dispatchEvent(new Event("change", { bubbles: true }));
-            }
-          }
-        }
-        if (cmd.comentario) {
-          const commentInput = Array.from(card.querySelectorAll("input:not([readonly]), textarea"))
-            .find((inp) => !inp.value || norm(inp.value) !== targetReg);
-          if (commentInput) {
-            commentInput.value = cmd.comentario;
-            commentInput.dispatchEvent(new Event("input", { bubbles: true }));
-            commentInput.dispatchEvent(new Event("change", { bubbles: true }));
-          }
+      if (candidate) {
+        candidate.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+        candidate.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+        candidate.click();
+      }
+    }
+
+    // Aplicar con tolerancia de renderizado
+    const applyToCard = (targetCard) => {
+      if (!targetCard) return false;
+      if (cmd.lesion) {
+        setSelectValue(targetCard.querySelector("select"), cmd.lesion);
+      }
+      if (cmd.comentario) {
+        const commentInput = findCommentField(targetCard);
+        if (commentInput) {
+          commentInput.value = cmd.comentario;
+          commentInput.dispatchEvent(new Event("input", { bubbles: true }));
+          commentInput.dispatchEvent(new Event("change", { bubbles: true }));
         }
       }
+      return true;
+    };
+
+    if (card) {
+      applyToCard(card);
+      return { ok: true, region: cmd.region, lesion: cmd.lesion, comentario: cmd.comentario };
+    }
+
+    // Reintentar si se hizo clic en el punto
+    setTimeout(() => {
+      const targetCard = (cmd.region ? findCardForRegion(cmd.region) : null) || getAllCards().pop();
+      applyToCard(targetCard);
     }, 150);
 
     return { ok: true, region: cmd.region, lesion: cmd.lesion };
   }
 
+  // 6. Dictar comentario solo
+  if (cmd.action === "dictar_comentario") {
+    let card = null;
+    if (cmd.region) {
+      card = findCardForRegion(cmd.region);
+    }
+    if (!card) {
+      const cards = getAllCards();
+      if (cmd.cardIndex !== undefined && cards[cmd.cardIndex]) {
+        card = cards[cmd.cardIndex];
+      } else {
+        card = cards[cards.length - 1];
+      }
+    }
+
+    if (card && cmd.comentario) {
+      const commentInput = findCommentField(card);
+      if (commentInput) {
+        commentInput.value = cmd.comentario;
+        commentInput.dispatchEvent(new Event("input", { bubbles: true }));
+        commentInput.dispatchEvent(new Event("change", { bubbles: true }));
+        return { ok: true, msg: "Comentario agregado.", comentario: cmd.comentario };
+      }
+    }
+
+    return { ok: false, motivo: "No se encontró la casilla de comentario en la tarjeta de lesión." };
+  }
+
   return { ok: false };
+}
+
+/* ---------- Manejador Global de Modales de Alertas / Notificaciones (Smile UPCH) ---------- */
+function dentaiHandleAlertModal(actionText) {
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const act = norm(actionText);
+
+  // 1. Buscar modales visibles o flotantes
+  const dialogs = Array.from(document.querySelectorAll(".modal, .modal-dialog, div[role=dialog], #modal_alerta, [id*='alert'], [class*='alert-modal'], .sweet-alert, .swal2-modal, .bootbox"))
+    .filter((d) => {
+      const r = d.getBoundingClientRect();
+      const st = window.getComputedStyle ? getComputedStyle(d) : {};
+      return (r.width > 0 || r.height > 0) && st.display !== "none" && st.visibility !== "hidden";
+    });
+
+  const containers = dialogs.length > 0 ? dialogs : [document.body];
+  let clickedBtn = null;
+
+  for (const container of containers) {
+    const btns = Array.from(container.querySelectorAll("button, a, input[type=button], input[type=submit], .btn"))
+      .filter((b) => {
+        const r = b.getBoundingClientRect();
+        const st = window.getComputedStyle ? getComputedStyle(b) : {};
+        return (r.width > 0 || r.height > 0) && st.display !== "none" && st.visibility !== "hidden";
+      });
+
+    // Búsqueda específica por el comando (ej: "enterado", "aceptar", "entendido", "cerrar", "ok")
+    clickedBtn = btns.find((b) => {
+      const t = norm(b.textContent || b.value || "");
+      if (act.includes("enterado") && t.includes("enterado")) return true;
+      if (act.includes("aceptar") && t.includes("aceptar")) return true;
+      if (act.includes("entendido") && t.includes("entendido")) return true;
+      if (act.includes("continuar") && t.includes("continuar")) return true;
+      if (act.includes("cerrar") && (t.includes("cerrar") || t === "x" || b.classList.contains("close") || b.getAttribute("data-dismiss") === "modal")) return true;
+      if (act === "ok" && (t === "ok" || t.includes("enterado") || t.includes("aceptar") || t.includes("cerrar"))) return true;
+      return false;
+    });
+
+    // Si solo hay un botón en el diálogo y se dijo cualquier confirmación
+    if (!clickedBtn && btns.length === 1 && (act.includes("enterado") || act.includes("aceptar") || act === "ok" || act.includes("cerrar") || act.includes("entendido"))) {
+      clickedBtn = btns[0];
+    }
+
+    if (clickedBtn) break;
+  }
+
+  // Si se pidió "cerrar" y hay botón de cierre (X)
+  if (!clickedBtn && (act.includes("cerrar") || act === "ok")) {
+    for (const container of containers) {
+      const closeBtn = Array.from(container.querySelectorAll("button.close, .close, [data-dismiss='modal'], a.close"))
+        .find((b) => {
+          const r = b.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        });
+      if (closeBtn) {
+        clickedBtn = closeBtn;
+        break;
+      }
+    }
+  }
+
+  if (clickedBtn) {
+    const label = norm(clickedBtn.textContent || clickedBtn.value || "cerrar");
+    clickedBtn.click();
+    return { ok: true, clicked: label };
+  }
+
+  return { ok: false, motivo: "No se encontró ningún modal o botón de alerta visible." };
 }
 
 /* ---------- Detector Automático de Cambios de Vista en Smile (AJAX Observer) ---------- */

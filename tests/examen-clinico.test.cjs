@@ -597,3 +597,144 @@ test("talla con modismos 'metro 70' y filtro anti-tartamudeo 'ta ta ta talla'", 
   assert.equal(pStutter.handled, true);
   assert.equal(pStutter.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
 });
+
+test("nuevas capacidades examen clínico: alertas globales, imagen interactiva, fonética y desambiguación", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // 1. Imagen interactiva de lesiones
+  // a) "lesión dorsal ampolla"
+  const c1 = s.propose("lesión dorsal ampolla");
+  assert.equal(c1.handled, true);
+  assert.equal(c1.interactiveCommand.action, "asignar_lesion");
+  assert.equal(c1.interactiveCommand.region, "dorsal");
+  assert.equal(c1.interactiveCommand.lesion, "AMPOLLA");
+
+  // b) "lesión ampolla"
+  const c2 = s.propose("lesión ampolla");
+  assert.equal(c2.handled, true);
+  assert.equal(c2.interactiveCommand.action, "asignar_lesion");
+  assert.equal(c2.interactiveCommand.lesion, "AMPOLLA");
+
+  // c) "comentario presenta fuerte lesión"
+  const c3 = s.propose("comentario presenta fuerte lesión");
+  assert.equal(c3.handled, true);
+  assert.equal(c3.interactiveCommand.action, "dictar_comentario");
+  assert.equal(c3.interactiveCommand.comentario, "Presenta fuerte lesión");
+
+  // d) "comentario del primero dolor persistente"
+  const c4 = s.propose("comentario del primero dolor persistente");
+  assert.equal(c4.handled, true);
+  assert.equal(c4.interactiveCommand.action, "dictar_comentario");
+  assert.equal(c4.interactiveCommand.cardIndex, 0);
+  assert.equal(c4.interactiveCommand.comentario, "Dolor persistente");
+
+  // e) "seleccionar dorsal"
+  const c5 = s.propose("seleccionar dorsal");
+  assert.equal(c5.handled, true);
+  assert.equal(c5.interactiveCommand.action, "seleccionar_region");
+  assert.equal(c5.interactiveCommand.region, "dorsal");
+
+  // f) Ejecución de dentaiHandleInteractiveLesion en DOM de Smile
+  s.w.document.getElementById("modal_lesiones").style.display = "block";
+  const rLesion = s.w.dentaiHandleInteractiveLesion({ action: "asignar_lesion", region: "dorsal", lesion: "AMPOLLA", comentario: "Presenta fuerte lesión" });
+  assert.equal(rLesion.ok, true);
+  assert.equal(s.w.document.querySelector('[name="lesion_dorsal"]').value, "AMPOLLA");
+  assert.equal(s.w.document.querySelector('[name="comentario_dorsal"]').value, "Presenta fuerte lesión");
+
+  const rCom1 = s.w.dentaiHandleInteractiveLesion({ action: "dictar_comentario", cardIndex: 0, comentario: "Comentario actualizado" });
+  assert.equal(rCom1.ok, true);
+  assert.equal(s.w.document.querySelector('[name="comentario_dorsal"]').value, "Comentario actualizado");
+
+  // 2. Cierre de alerta / notificaciones globales con dentaiHandleAlertModal
+  s.w.document.getElementById("modal_alerta").style.display = "block";
+  const rAlert = s.w.dentaiHandleAlertModal("enterado");
+  assert.equal(rAlert.ok, true);
+  assert.ok(rAlert.clicked.includes("enterado"));
+
+  // 3. Facies con variantes fonéticas ("fáciles característica", "fáciles no característica", "faciales")
+  const pFac1 = s.propose("fáciles característica");
+  assert.equal(pFac1.handled, true);
+  assert.equal(pFac1.entries.find((e) => e.field.etiqueta === "Facies").valor, "Característica");
+
+  const pFac2 = s.propose("fáciles no característica");
+  assert.equal(pFac2.handled, true);
+  assert.equal(pFac2.entries.find((e) => e.field.etiqueta === "Facies").valor, "No característica");
+
+  const pFac3 = s.propose("faciales característica");
+  assert.equal(pFac3.handled, true);
+  assert.equal(pFac3.entries.find((e) => e.field.etiqueta === "Facies").valor, "Característica");
+
+  // 4. Desambiguación de Observación General vs Observación de Conclusión
+  const pObsGen = s.propose("observación general paciente normotenso");
+  assert.equal(pObsGen.handled, true);
+  const entGen = pObsGen.entries.find((e) => e.field.etiqueta.includes("Observación General"));
+  assert.ok(entGen, "Debe mapear a Observación General");
+  assert.equal(entGen.valor, "Paciente normotenso");
+
+  const pObsConc = s.propose("observación conclusión riesgo estomatológico bajo");
+  assert.equal(pObsConc.handled, true);
+  const entConc = pObsConc.entries.find((e) => e.field.etiqueta.includes("Conclusión"));
+  assert.ok(entConc, "Debe mapear a Observación (Conclusión)");
+  assert.equal(entConc.valor, "Riesgo estomatológico bajo");
+
+  // 5. Nutrición: siglas fonéticas "avent" y "a vent" -> ABEN
+  const pAvent1 = s.propose("apreciación del estado nutricional avent");
+  assert.equal(pAvent1.handled, true);
+  assert.equal(pAvent1.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "ABEN");
+
+  const pAvent2 = s.propose("apreciación del estado nutricional a vent");
+  assert.equal(pAvent2.handled, true);
+  assert.equal(pAvent2.entries.find((e) => e.field.etiqueta.includes("Nutricional")).valor, "ABEN");
+
+  // 6. Lucidez y Orientación: marcado y desmarcado
+  const pLucCheck = s.propose("marca lucidez y orientación");
+  assert.equal(pLucCheck.handled, true);
+  assert.equal(pLucCheck.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "true");
+
+  const pLucUncheck = s.propose("desmarca lucidez y orientación");
+  assert.equal(pLucUncheck.handled, true);
+  assert.equal(pLucUncheck.entries.find((e) => e.field.etiqueta.includes("Lucidez")).valor, "false");
+
+  // 7. Persona con necesidades especiales (Si / No)
+  const pNecNo1 = s.propose("no es una persona con necesidades especiales");
+  assert.equal(pNecNo1.handled, true);
+  assert.equal(pNecNo1.entries.find((e) => e.field.etiqueta.includes("necesidades especiales")).valor, "No");
+
+  const pNecNo2 = s.propose("personas con necesidades especiales no");
+  assert.equal(pNecNo2.handled, true);
+  assert.equal(pNecNo2.entries.find((e) => e.field.etiqueta.includes("necesidades especiales")).valor, "No");
+
+  const pNecSi = s.propose("persona con necesidades especiales sí");
+  assert.equal(pNecSi.handled, true);
+  assert.equal(pNecSi.entries.find((e) => e.field.etiqueta.includes("necesidades especiales")).valor, "Si");
+
+  // 8. Lesiones Anterior y Lesiones Posterior (Plurales y singulares)
+  const pLesAntPlural = s.propose("lesiones anteriores ausentes");
+  assert.equal(pLesAntPlural.handled, true);
+  assert.equal(pLesAntPlural.entries.find((e) => e.field.etiqueta.includes("Lesiones Anterior")).valor, "Ausentes");
+
+  const pLesAntSingular = s.propose("lesión anterior presente");
+  assert.equal(pLesAntSingular.handled, true);
+  assert.equal(pLesAntSingular.entries.find((e) => e.field.etiqueta.includes("Lesiones Anterior")).valor, "Presentes");
+
+  const pLesPostPlural = s.propose("lesiones posteriores presentes");
+  assert.equal(pLesPostPlural.handled, true);
+  assert.equal(pLesPostPlural.entries.find((e) => e.field.etiqueta.includes("Lesiones Posterior")).valor, "Presentes");
+
+  const pLesPostAus = s.propose("lesiones posteriores ausentes");
+  assert.equal(pLesPostAus.handled, true);
+  assert.equal(pLesPostAus.entries.find((e) => e.field.etiqueta.includes("Lesiones Posterior")).valor, "Ausente");
+
+  // 9. Anexos (Normal / Alterado)
+  const pAnexNorm = s.propose("anexos normal");
+  assert.equal(pAnexNorm.handled, true);
+  assert.equal(pAnexNorm.entries.find((e) => e.field.etiqueta.includes("Anexos")).valor, "Normal");
+
+  const pAnexAlt = s.propose("anexos alterado");
+  assert.equal(pAnexAlt.handled, true);
+  assert.equal(pAnexAlt.entries.find((e) => e.field.etiqueta.includes("Anexos")).valor, "Alterado");
+
+  const pAnexPiel = s.propose("piel y anexos normal");
+  assert.equal(pAnexPiel.handled, true);
+  assert.equal(pAnexPiel.entries.find((e) => e.field.etiqueta.includes("Anexos")).valor, "Normal");
+});

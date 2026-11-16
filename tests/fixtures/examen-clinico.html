@@ -287,5 +287,77 @@
       </tbody>
     </table>
   </div>
+
+  <div class="card">
+    <h4>C - CONCLUSIÓN</h4>
+    <table>
+      <tbody>
+        <tr>
+          <td>Observación:</td>
+          <td><textarea name="observacion_conclusion"></textarea></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal interactivo de lesiones (Smile UPCH) -->
+  <div class="modal" id="modal_lesiones" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h5>Pregunta Imagen Interactiva 1</h5>
+        <button type="button" class="close" data-dismiss="modal">×</button>
+      </div>
+      <div class="modal-body" style="display: flex;">
+        <svg id="svg_body" width="200" height="300">
+          <circle id="pt_dorsal" data-region="dorsal" cx="100" cy="100" r="5"></circle>
+          <text data-region="dorsal" x="110" y="105">Dorsal</text>
+          <circle id="pt_perinal" data-region="perinal" cx="100" cy="180" r="5"></circle>
+          <text data-region="perinal" x="110" y="185">Perinal</text>
+          <circle id="pt_occipital" data-region="occipital" cx="100" cy="30" r="5"></circle>
+          <text data-region="occipital" x="110" y="35">Occipital</text>
+        </svg>
+        <div id="cards_container">
+          <div class="card" id="card_dorsal">
+            <label>Lesión</label>
+            <select name="lesion_dorsal">
+              <option value="">::seleccione::</option>
+              <option value="AMPOLLA">AMPOLLA</option>
+              <option value="PÁPULA">PÁPULA</option>
+            </select>
+            <label>En</label>
+            <input type="text" name="en" value="Dorsal" readonly>
+            <label>Comentario</label>
+            <textarea name="comentario_dorsal"></textarea>
+            <a href="#" class="btn btn-danger btn-eliminar">Eliminar</a>
+          </div>
+          <div class="card" id="card_perinal">
+            <label>Lesión</label>
+            <select name="lesion_perinal">
+              <option value="">::seleccione::</option>
+              <option value="AMPOLLA">AMPOLLA</option>
+              <option value="PÁPULA">PÁPULA</option>
+            </select>
+            <label>En</label>
+            <input type="text" name="en" value="Perinal" readonly>
+            <label>Comentario</label>
+            <textarea name="comentario_perinal"></textarea>
+            <a href="#" class="btn btn-danger btn-eliminar">Eliminar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de alerta del sistema Smile -->
+  <div class="modal" id="modal_alerta" style="display: none;">
+    <div class="modal-header">
+      <h5>ALERTAS</h5>
+      <button class="close">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Saldo total: 60.9</p>
+      <button type="button" class="btn btn-danger" id="btn_enterado">✔ Enterado</button>
+    </div>
+  </div>
 </div>
 </body></html>

@@ -442,7 +442,13 @@ async function handleInteractiveLesionVoice(cmd) {
         setStatus(`Tabla de lesión en ${cmd.region} eliminada.`);
       } else if (cmd.action === "asignar_lesion") {
         speak("Registrado.");
-        setStatus(`Lesión ${cmd.lesion} asignada en ${cmd.region}.`);
+        setStatus(`Lesión ${cmd.lesion} asignada${cmd.region ? " en " + cmd.region : ""}.`);
+      } else if (cmd.action === "dictar_comentario") {
+        speak("Comentario agregado.");
+        setStatus(`Comentario agregado${cmd.region ? " a " + cmd.region : ""}.`);
+      } else if (cmd.action === "seleccionar_region") {
+        speak("Seleccionado.");
+        setStatus(`Punto ${cmd.region} seleccionado en el gráfico.`);
       }
       return true;
     } else {
@@ -819,6 +825,34 @@ async function processText(rawText) {
   // Comandos de voz directos (ejecución rápida nativa)
   const normRaw = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,;:]+$/, "").trim();
 
+  // COMANDO GLOBAL: MODALES DE ALERTA O NOTIFICACIONES ("enterado", "aceptar", "entendido", "cerrar alerta", "cerrar modal", etc.)
+  const ALERT_MODAL_REGEX = /^(?:enterado|aceptar|entendido|de\s+acuerdo|comprendido|continuar|cerrar(?:\s+(?:alerta|notificaci[oó]n|aviso|modal|di[aá]logo|ventana))?|ok(?:\s+cerrar)?)$/i;
+  if (ALERT_MODAL_REGEX.test(normRaw)) {
+    try {
+      const t = await activeTab();
+      const tabId = (t && t.id) || (state.tab && state.tab.id);
+      if (tabId) {
+        const resAlert = await chrome.scripting.executeScript({
+          target: { tabId, allFrames: true },
+          func: dentaiHandleAlertModal,
+          args: [normRaw]
+        });
+        const hitAlert = resAlert?.find((r) => r.result?.ok)?.result;
+        if (hitAlert) {
+          speak("Listo.");
+          setStatus(`Alerta cerrada (${hitAlert.clicked}).`);
+          return;
+        } else if (/^(?:enterado|entendido|de\s+acuerdo|comprendido)$/i.test(normRaw)) {
+          speak("No hay alertas activas.");
+          setStatus("No se detectó ninguna alerta o modal abierto.");
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("dentaiHandleAlertModal error:", e);
+    }
+  }
+
   // Anamnesis tiene prioridad sobre navegación y Gemini para conservar el relato literal.
   const anamnesis = proposeAnamnesisActual(text, state.fields, state.anamnesisAwaiting);
   if (anamnesis.handled) {
@@ -889,6 +923,26 @@ async function processText(rawText) {
         setStatus(`Campo ${examen.focusObservation} listo. Dicta la nueva observación.`);
         return;
       }
+      // Si el comando fue exclusivamente para marcar o desmarcar Lucidez y Orientación, aplicar al instante en Smile
+      if (examen.entries && examen.entries.length === 1 && /lucidez/i.test(examen.entries[0].field.etiqueta || "")) {
+        const item = examen.entries[0];
+        const want = item.valor === "true";
+        try {
+          const t = await activeTab();
+          const tabId = (t && t.id) || (state.tab && state.tab.id);
+          if (tabId) {
+            await chrome.scripting.executeScript({
+              target: { tabId, allFrames: true },
+              func: dentaiFill,
+              args: [[{ key: item.field.key, domId: item.field.domId, name: item.field.name, valor: item.valor, tipo: "checkbox" }]]
+            });
+          }
+        } catch (e) {}
+        speak(want ? "Lucidez marcada." : "Lucidez desmarcada.");
+        setStatus(`Lucidez y Orientación ${want ? "marcada con check" : "desmarcada"} en Smile.`);
+        return;
+      }
+
       if (examen.entries && examen.entries.length > 0) {
         const addedLabels = [];
         for (const { field, valor } of examen.entries) {

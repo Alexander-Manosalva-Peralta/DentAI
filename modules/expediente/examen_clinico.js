@@ -19,6 +19,15 @@ const TIPOS_LESIONES_INTERACTIVAS = [
   "ÚLCERA SUPERFICIAL", "VESÍCULA"
 ];
 
+// Lista de regiones y puntos anatómicos del modal interactivo
+const REGIONES_ANATOMICAS_INTERACTIVAS = [
+  "cefalica", "cefalico", "otica", "optica", "occipital", "acromial", "vertebral",
+  "escapular", "braquial", "dorsal", "olecranal", "lumbar", "sacral",
+  "manus", "mano", "extremidad superior", "gluteal", "gluteo",
+  "perinal", "perineal", "extremidad inferior", "femoral", "popliteal",
+  "sural", "calcaneal", "calcaneo", "orbital", "ocular", "nasal", "labial", "menton", "mejilla"
+];
+
 // Normalizador fonético y de variantes de reconocimiento de voz para siglas clínicas (NLP Manos Libres)
 function normalizeClinicalAcronyms(text) {
   if (!text) return "";
@@ -31,8 +40,8 @@ function normalizeClinicalAcronyms(text) {
   // Limpiar muletillas de inicio en dictado continuo/corrido
   t = t.replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/gi, "");
 
-  // Diccionario fonético para Facies (faz, fases, fase, faces, fascies, facie, fascie, face)
-  t = t.replace(/\b(?:fa[sc]+ies?|fa[sc]+ie|faces?|fases?|faz)\b/gi, "facies");
+  // Diccionario fonético para Facies (fáciles, facile, faciles, faciales, facial, faz, fases, fase, faces, fascies, facie, fascie, face)
+  t = t.replace(/\b(?:f[aá]ciles?|facil(?:es)?|faciales?|facial|fa[sc]+ies?|fa[sc]+ie|faces?|fases?|faz)\b/gi, "facies");
 
   // 1. ABEH / AREH / AMEH (tolerancia a 'hache', 'h' final, letras separadas, terminación en 'a')
   t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh|ameha|dameh)\b/gi, "AMEH");
@@ -47,8 +56,8 @@ function normalizeClinicalAcronyms(text) {
   // ABEG: abej, abeja, aveja, abg, a beg, a veg, aveg, a b e g, ab eg
   t = t.replace(/\b(?:abeg|abej|abg|abeja|aveja|a\s+beg|a\s+veg|aveg|a\s+b\s+e\s+g|ab\s+eg|dabeg)\b/gi, "ABEG");
 
-  // 3. ABEN / AREN / AMEN (tolerancia a 'a rem', 'amén', 'a ven', ARN, a reen, etc.)
-  t = t.replace(/\b(?:aben|a\s+ben|a\s+ven|aven|a\s+b\s+e\s+n|ab\s+en|ab\s+n|daben)\b/gi, "ABEN");
+  // 3. ABEN / AREN / AMEN (tolerancia a 'a rem', 'amén', 'a ven', 'avent', 'a vent', ARN, a reen, etc.)
+  t = t.replace(/\b(?:aben|a\s+ben|a\s+ven|aven|avent|a\s+vent|abent|a\s+bent|a\s+b\s+e\s+n|ab\s+en|ab\s+n|daben)\b/gi, "ABEN");
   t = t.replace(/\b(?:aren|a\s+rem|arem|a\s+ren|a\s+reen|reen|arn|a\s+r\s+n|a\s+r\s+e\s+n|ar\s+en|ar\s+n|daren)\b/gi, "AREN");
   t = t.replace(/\b(?:amen|am[eé]n|a\s+men|a\s+m\s+e\s+n|am\s+en|am\s+n|damen)\b/gi, "AMEN");
 
@@ -64,7 +73,7 @@ function normalizeClinicalAcronyms(text) {
   t = t.replace(/\b((?:apreciaci[oó]n\s+general|apreciaci[oó]n)\s+)(?:abe|a\s+be|ab)\b/gi, "$1ABEG");
 
   // 5. Casos truncados con contexto de Estado Nutricional
-  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:ab|a\s+b|abe|a\s+be)\b/gi, "$1ABEN");
+  t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:ab|a\s+b|abe|a\s+be|avent|a\s+vent|abent)\b/gi, "$1ABEN");
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:are|a\s+re|arn|reen)\b/gi, "$1AREN");
   t = t.replace(/\b((?:(?:apreciaci[oó]n\s+del\s+)?estado\s+nutricional|nutrici[oó]n)\s+)(?:ame|a\s+me)\b/gi, "$1AMEN");
 
@@ -227,10 +236,13 @@ function extractEctoscopia(text) {
   }
 
   // Persona con Necesidades Especiales (Si / No)
-  if (/\b(?:persona\s+con\s+necesidades\s+especiales\s+s[ií]|s[ií]\s+es\s+persona\s+con\s+necesidades\s+especiales|necesidades\s+especiales\s+s[ií]|tiene\s+necesidades\s+especiales)\b/i.test(norm)) {
-    res.necesidadesEspeciales = "Si";
-  } else if (/\b(?:persona\s+con\s+necesidades\s+especiales\s+no|no\s+es\s+persona\s+con\s+necesidades\s+especiales|personas\s+con\s+necesidades\s+especiales\s+no|necesidades\s+especiales\s+no|sin\s+necesidades\s+especiales)\b/i.test(norm)) {
+  const isNoNec = /\b(?:(?:no\s+(?:es\s+)?(?:una\s+)?(?:persona|paciente)\s+con\s+necesidades\s+especiales)|(?:persona|paciente|personas)\s+con\s+necesidades\s+especiales\s+(?:es\s+)?no|necesidades\s+especiales\s+(?:es\s+)?no|no\s+tiene\s+necesidades\s+especiales|sin\s+necesidades\s+especiales)\b/i.test(norm);
+  const isSiNec = /\b(?:(?:s[ií]\s+(?:es\s+)?(?:una\s+)?(?:persona|paciente)\s+con\s+necesidades\s+especiales)|(?:persona|paciente|personas)\s+con\s+necesidades\s+especiales\s+(?:es\s+)?s[ií]|necesidades\s+especiales\s+(?:es\s+)?s[ií]|(?:s[ií]\s+)?tiene\s+necesidades\s+especiales|con\s+necesidades\s+especiales)\b/i.test(norm);
+
+  if (isNoNec) {
     res.necesidadesEspeciales = "No";
+  } else if (isSiNec) {
+    res.necesidadesEspeciales = "Si";
   }
 
   // Facies (y variaciones: fascies, faz, fases, faces, facie)
@@ -263,7 +275,7 @@ function extractEctoscopia(text) {
     let obs = mFaciesSi[1].trim().replace(/^(?:(?:facies\s+)?caracter[ií]stica\s*[,;:]?\s*)+/i, "")
       .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
     if (obs.length > 2) res.obsFaciesCaracteristica = capitalizeFirstLetter(obs);
-  } else if (!isBorrarCaract && !res.facies && /\b(?:facies\s+caracter[ií]stica|facies\s+caracter[ií]stico)\b/i.test(norm)) {
+  } else if (!isBorrarCaract && !res.facies && /\b(?:facies\s+caracter[ií]stica|facies\s+caracter[ií]stico|caracter[ií]stica)\b/i.test(norm) && !/\bno\s+caracter[ií]stica\b/i.test(norm)) {
     res.facies = "Característica";
   }
 
@@ -410,24 +422,24 @@ function extractPielAnexos(text) {
     }
   }
 
-  // Lesiones Anterior
-  if (/\blesiones\s+anterior\s+ausentes?\b|\bsin\s+lesiones\s+anterior\b/i.test(norm)) {
+  // Lesiones Anterior (singular o plural, presentes / ausentes)
+  if (/\blesi[oó]n(?:es)?\s+anterior(?:es)?\s+ausentes?\b|\bsin\s+lesi[oó]n(?:es)?\s+anterior(?:es)?\b/i.test(norm)) {
     res.lesionesAnterior = "Ausentes";
-  } else if (/\blesiones\s+anterior\s+presentes?\b|\bcon\s+lesiones\s+anterior\b/i.test(norm)) {
+  } else if (/\blesi[oó]n(?:es)?\s+anterior(?:es)?\s+presentes?\b|\bcon\s+lesi[oó]n(?:es)?\s+anterior(?:es)?\b/i.test(norm)) {
     res.lesionesAnterior = "Presentes";
   }
 
-  // Lesiones Posterior
-  if (/\blesiones\s+posterior\s+ausentes?\b|\bsin\s+lesiones\s+posterior\b/i.test(norm)) {
+  // Lesiones Posterior (singular o plural, presentes / ausente / ausentes)
+  if (/\blesi[oó]n(?:es)?\s+posterior(?:es)?\s+ausentes?\b|\bsin\s+lesi[oó]n(?:es)?\s+posterior(?:es)?\b/i.test(norm)) {
     res.lesionesPosterior = "Ausente";
-  } else if (/\blesiones\s+posterior\s+presentes?\b|\bcon\s+lesiones\s+posterior\b/i.test(norm)) {
+  } else if (/\blesi[oó]n(?:es)?\s+posterior(?:es)?\s+presentes?\b|\bcon\s+lesi[oó]n(?:es)?\s+posterior(?:es)?\b/i.test(norm)) {
     res.lesionesPosterior = "Presentes";
   }
 
-  // Anexos
-  if (/\banexos?\s+normal\b|\banexo\s+normal\b/i.test(norm)) {
+  // Anexos (Normal / Alterado / Anormal)
+  if (/\b(?:piel\s+y\s+)?anexos?\s+(?:normal(?:es)?|sin\s+alteraciones?|conservad[oa]s?)\b/i.test(norm)) {
     res.anexos = "Normal";
-  } else if (/\banexos?\s+alterados?\b|\banexo\s+alterado\b|\banexos?\s+anormal\b/i.test(norm)) {
+  } else if (/\b(?:piel\s+y\s+)?anexos?\s+(?:alterad[oa]s?|anormal(?:es)?|con\s+alteraciones?)\b/i.test(norm)) {
     res.anexos = "Alterado";
   }
 
@@ -466,10 +478,19 @@ function extractFuncionesVitales(text) {
     res.presionArterial = `${mPresion[1]}/${mPresion[2]}`;
   }
 
-  // Observación (limpieza estricta de prefijos como "la observación sería que...")
-  const mObs = text.match(/(?:la\s+observaci[oó]n\s+(?:ser[ií]a|es|dice)?\s*(?:que)?|en\s+observaci[oó]n\s*(?:coloca|pon|escribe)?\s*(?:que)?|observaci[oó]n\s*[:=]\s*(?:que)?)\s*(.+?)(?=(?:,\s*)?(?:confirmar|$))/i);
-  if (mObs && mObs[1].trim().length > 2) {
-    res.observacion = capitalizeFirstLetter(mObs[1].trim().replace(/^(?:que|el\s+paciente\s+presenta\s+ser[ií]a\s+que)\s+/i, ""));
+  // Observación de Conclusión / Final
+  const mObsConc = text.match(/(?:(?:la\s+)?observaci[oó]n\s+(?:de\s+)?conclusi[oó]n|(?:la\s+)?observaci[oó]n\s+final|en\s+conclusi[oó]n\s+observaci[oó]n)(?:\s*(?:es|ser[ií]a|dice|coloca|pon|escribe)?\s*(?:que)?|[:=]\s*(?:que)?)\s*(.+?)(?=(?:,\s*)?(?:confirmar|$))/i);
+  if (mObsConc && mObsConc[1].trim().length > 2) {
+    res.observacionConclusion = capitalizeFirstLetter(mObsConc[1].trim().replace(/^(?:que|es|ser[ií]a)\s+/i, ""));
+  }
+
+  // Observación General (o genérica si no es conclusión)
+  const mObsGen = text.match(/(?:(?:la\s+)?observaci[oó]n\s+general|en\s+observaci[oó]n\s+general)(?:\s*(?:es|ser[ií]a|dice|coloca|pon|escribe)?\s*(?:que)?|[:=]\s*(?:que)?)\s*(.+?)(?=(?:,\s*)?(?:observaci[oó]n\s+(?:de\s+)?conclusi[oó]n|observaci[oó]n\s+final|confirmar|$))/i) ||
+                  (!mObsConc ? text.match(/(?:la\s+observaci[oó]n\s+(?:ser[ií]a|es|dice)?\s*(?:que)?|en\s+observaci[oó]n\s*(?:coloca|pon|escribe)?\s*(?:que)?|observaci[oó]n\s*[:=]\s*(?:que)?)\s*(.+?)(?=(?:,\s*)?(?:confirmar|$))/i) : null);
+  if (mObsGen && mObsGen[1].trim().length > 2) {
+    const cleanObs = capitalizeFirstLetter(mObsGen[1].trim().replace(/^(?:que|el\s+paciente\s+presenta\s+ser[ií]a\s+que|es|ser[ií]a)\s+/i, ""));
+    res.observacionGeneral = cleanObs;
+    res.observacion = cleanObs; // compatibilidad
   }
 
   return res;
@@ -567,26 +588,105 @@ function extractInteractiveLesionCommand(text) {
   }
 
   // Cerrar modal interactivo
-  if (/^(?:cerrar|cierra|cerrar\s+imagen\s+interactiva|cerrar\s+modal|ok\s+cerrar)$/i.test(norm)) {
+  if (/^(?:cerrar|cierra|cerrar\s+imagen\s+interactiva|cerrar\s+modal|cerrar\s+lesiones|ok\s+cerrar|listo\s+cerrar)$/i.test(norm)) {
     return { action: "cerrar_modal_lesiones" };
   }
 
-  // Eliminar tabla / tarjeta en imagen interactiva (requiere palabra tabla o lesión)
-  const mDel = norm.match(/(?:eliminar|borrar|quitar)\s+(?:la\s+)?(?:tabla|lesi[oó]n)(?:\s+(?:de|en))?\s+([a-z\s]+)/i);
+  // Eliminar tabla / tarjeta en imagen interactiva
+  const mDel = norm.match(/^(?:eliminar|borrar|quitar)\s+(?:la\s+)?(?:tabla|tarjeta|lesi[oó]n)?(?:\s+(?:de|en))?\s+([a-z\s]+)$/i);
   if (mDel) {
     const reg = mDel[1].trim();
-    if (reg.length > 2) {
+    if (reg.length > 2 && (REGIONES_ANATOMICAS_INTERACTIVAS.includes(reg) || /tabla|tarjeta|lesi/i.test(text))) {
       return { action: "eliminar_lesion", region: reg };
     }
   }
 
-  // Asignar lesión en región (ej: "seleccionar orbital lesión pápula comentario sospecha de dermatitis")
-  const mAssign = text.match(/(?:seleccionar|marcar|en)?\s*([a-záéíóúñ\s]+?)\s+lesi[oó]n\s+([a-záéíóúñ\s]+?)(?:\s+(?:comentario|nota|observaci[oó]n)\s+(.+))?$/i);
-  if (mAssign) {
-    const reg = mAssign[1].trim();
-    const les = mAssign[2].trim().toUpperCase();
-    const com = mAssign[3] ? mAssign[3].trim() : "";
+  // Dictar comentario solo:
+  // A) Con índice ordinal ("comentario del primero...", "comentario de la primera...")
+  const mComIdx1 = text.match(/^(?:(?:podemos|quiero|poner|escribir|anotar)\s+)?(?:el\s+)?(?:comentario|nota|observaci[oó]n)\s+(?:del\s+|de\s+la\s+)?(?:primer[oa]|1|uno)\s*(?:es|ser[ií]a|dice|:)?\s*(.+)$/i);
+  if (mComIdx1 && mComIdx1[1].trim().length > 1) {
+    return { action: "dictar_comentario", cardIndex: 0, comentario: capitalizeFirstLetter(mComIdx1[1].trim()) };
+  }
+  const mComIdx2 = text.match(/^(?:(?:podemos|quiero|poner|escribir|anotar)\s+)?(?:el\s+)?(?:comentario|nota|observaci[oó]n)\s+(?:del\s+|de\s+la\s+)?(?:segund[oa]|2|dos)\s*(?:es|ser[ií]a|dice|:)?\s*(.+)$/i);
+  if (mComIdx2 && mComIdx2[1].trim().length > 1) {
+    return { action: "dictar_comentario", cardIndex: 1, comentario: capitalizeFirstLetter(mComIdx2[1].trim()) };
+  }
+
+  // B) Con región específica ("comentario de dorsal...", "comentario en dorsal...")
+  const mComReg = text.match(/^(?:(?:podemos|quiero|poner|escribir|anotar)\s+)?(?:el\s+)?(?:comentario|nota|observaci[oó]n)(?:\s+(?:en|de|del))?\s+([a-zñáéíóú\s]+?)\s*(?:es|ser[ií]a|dice|:)\s*(.+)$/i);
+  if (mComReg) {
+    const rCandidate = norm.replace(/[\u0300-\u036f]/g, "").match(/(?:comentario|nota|observacion)\s+(?:en\s+|de\s+|del\s+)?([a-z]+)/i);
+    const regCandidate = rCandidate ? rCandidate[1].trim() : "";
+    if (REGIONES_ANATOMICAS_INTERACTIVAS.includes(regCandidate)) {
+      return { action: "dictar_comentario", region: regCandidate, comentario: capitalizeFirstLetter(mComReg[2].trim()) };
+    }
+  }
+
+  // C) Comentario genérico para la tarjeta activa / última ("comentario presenta fuerte lesión", "podemos comentario...")
+  const mComGen = text.match(/^(?:(?:podemos|quiero|poner|escribir|anotar)\s+)?(?:el\s+)?(?:comentario|nota|observaci[oó]n)\s*(?:es|ser[ií]a|dice|:)?\s*(.+)$/i);
+  if (mComGen && !/(?:general|conclusi[oó]n|funciones\s+vitales)/i.test(mComGen[1])) {
+    return { action: "dictar_comentario", comentario: capitalizeFirstLetter(mComGen[1].trim().replace(/^(?:que|es|ser[ií]a)\s+/i, "")) };
+  }
+
+  // Asignar lesión:
+  // Formato A: [region] lesión [tipo_lesion] [comentario] (ej: "seleccionar orbital lesión pápula comentario sospecha de dermatitis")
+  const mAssignMid = text.match(/(?:seleccionar|marcar|en)?\s*([a-záéíóúñ\s]+?)\s+lesi[oó]n\s+([a-záéíóúñ\s]+?)(?:\s+(?:comentario|nota|observaci[oó]n)\s+(.+))?$/i);
+  if (mAssignMid && mAssignMid[1].trim().length > 1) {
+    const reg = mAssignMid[1].trim();
+    const les = mAssignMid[2].trim().toUpperCase();
+    const com = mAssignMid[3] ? mAssignMid[3].trim() : "";
     return { action: "asignar_lesion", region: reg, lesion: les, comentario: com };
+  }
+
+  // Formato B: lesión [region] [tipo_lesion] (ej: "lesión dorsal ampolla") o lesión [tipo_lesion] (ej: "lesión ampolla")
+  const sortedLesiones = [...TIPOS_LESIONES_INTERACTIVAS].sort((a, b) => b.length - a.length);
+  let matchedLesion = null;
+  for (const les of sortedLesiones) {
+    const lesNorm = les.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const re = new RegExp(`\\b${lesNorm}\\b`, "i");
+    if (re.test(norm)) {
+      matchedLesion = les;
+      break;
+    }
+  }
+
+  if (matchedLesion) {
+    let matchedRegion = null;
+    for (const reg of REGIONES_ANATOMICAS_INTERACTIVAS) {
+      const re = new RegExp(`\\b${reg}\\b`, "i");
+      if (re.test(norm)) {
+        matchedRegion = reg;
+        break;
+      }
+    }
+    if (!matchedRegion) {
+      const mRegIn = norm.match(/(?:tipo\s+de\s+)?lesi[oó]n(?:\s+(?:en|de))?\s+([a-zñáéíóú]+)\s+/i);
+      if (mRegIn && mRegIn[1] !== "de" && mRegIn[1] !== "en") {
+        matchedRegion = mRegIn[1];
+      }
+    }
+
+    let matchedComment = "";
+    const mComInAssign = text.match(/(?:comentario|nota|observaci[oó]n)\s*(?:es|ser[ií]a|dice|:)?\s*(.+)$/i);
+    if (mComInAssign) {
+      matchedComment = mComInAssign[1].trim().replace(/^(?:que|es|ser[ií]a)\s+/i, "");
+    }
+
+    return {
+      action: "asignar_lesion",
+      lesion: matchedLesion,
+      region: matchedRegion || null,
+      comentario: matchedComment
+    };
+  }
+
+  // Seleccionar punto / región anatómica en el gráfico ("seleccionar dorsal", "marcar perinal", "punto occipital")
+  const mSelectReg = norm.match(/^(?:seleccionar|marcar|elegir|tocar|click\s+en|abrir\s+punto|punto)\s+(?:punto\s+|regi[oó]n\s+)?([a-z\s]+)$/i);
+  if (mSelectReg) {
+    const reg = mSelectReg[1].trim();
+    if (REGIONES_ANATOMICAS_INTERACTIVAS.includes(reg)) {
+      return { action: "seleccionar_region", region: reg };
+    }
   }
 
   return null;
@@ -719,7 +819,7 @@ function proposeExamenClinico(text, fields) {
     if (f) entries.push({ field: f, valor: piel.lesionesPosterior });
   }
   if (piel.anexos) {
-    const f = findF(/^anexos?:?$/i, /piel/i);
+    const f = findF(/^anexos?:?$/i, /piel/i) || findF(/^anexos?:?$/i);
     if (f) entries.push({ field: f, valor: piel.anexos });
   }
 
@@ -740,9 +840,16 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/presi[oó]n\s+arterial/i);
     if (f) entries.push({ field: f, valor: vitales.presionArterial });
   }
-  if (vitales.observacion) {
+  if (vitales.observacionGeneral) {
+    const f = findF(/observaci[oó]n\s+general/i) || findF(/^observaci[oó]n:?$/i, /funciones\s+vitales|general/i) || findF(/^observaci[oó]n:?$/i);
+    if (f) entries.push({ field: f, valor: vitales.observacionGeneral });
+  } else if (vitales.observacion) {
     const f = findF(/^observaci[oó]n:?$/i, /funciones\s+vitales|general/i) || findF(/^observaci[oó]n:?$/i);
     if (f) entries.push({ field: f, valor: vitales.observacion });
+  }
+  if (vitales.observacionConclusion) {
+    const f = findF(/observaci[oó]n\s*\(conclusi[oó]n\)/i) || findF(/conclusi[oó]n/i, /conclusi[oó]n|observaci[oó]n/i) || findF(/observaci[oó]n/i, /conclusi[oó]n/i);
+    if (f) entries.push({ field: f, valor: vitales.observacionConclusion });
   }
 
   // Estomatológico Extraoral
