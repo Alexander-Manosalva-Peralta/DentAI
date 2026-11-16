@@ -39,7 +39,8 @@ function initWebSpeech() {
       if (typeof OrbVisualizer !== "undefined") OrbVisualizer.setHearing(true, 0.9);
       const cleanInterim = interim.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       if (!cleanInterim.startsWith("abriendo") && !(state.isSpeakingTTS && cleanInterim === state.speakingText)) {
-        addTranscript(interim, true);
+        const dispInterim = interim.replace(/\b([a-záéíóúñ]{1,4})\b(?:\s+\1\b){2,}/gi, "");
+        addTranscript(dispInterim, true);
         const mBar = $("meterBar");
         if (mBar) mBar.style.width = "70%";
       }
@@ -89,7 +90,9 @@ function initWebSpeech() {
       }
 
       if (typeof handleText === "function") {
-        handleText(final);
+        let cleanText = final.replace(/\b([a-záéíóúñ]{1,4})\b(?:\s+\1\b){2,}/gi, "");
+        cleanText = cleanText.replace(/^(?:\s*(?:ta|te|ti|to|tu|pa|pe|eh|em|um|uh|ah)\b)+/gi, "").trim();
+        handleText(cleanText || final);
       }
     }
   };

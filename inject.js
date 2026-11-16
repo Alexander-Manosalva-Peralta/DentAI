@@ -278,7 +278,7 @@ function dentaiScan(anamnesisFields = []) {
     if (["password", "hidden", "submit", "button", "reset", "image", "file"].includes(type)) continue;
     const anamnesisField = hcForm?.contains(el) ? anamnesisByName.get(el.name) : null;
     const isExamenConditional = isExamenClinico && (
-      /^(areg|ameg|aren|amen|areh|ameh|aumentada|disminuida):?$/i.test(labelFor(el) || el.name || "") ||
+      /^(areg|ameg|aren|amen|areh|ameh|aumentada|disminuida|no\s+caracter[ií]stica|caracter[ií]stica|no\s+receptivo|receptivo):?$/i.test(labelFor(el) || el.name || "") ||
       /describa/i.test(labelFor(el) || el.name || "")
     );
     const isImc = isExamenClinico && /imc/i.test(labelFor(el) || el.name || "");
@@ -362,6 +362,10 @@ function dentaiScan(anamnesisFields = []) {
       if (/^ameh:?$/i.test(lbl)) { entry.etiqueta = "AMEH:"; entry.dependsOn = "estado_hidratacion"; }
       if (/^aumentada:?$/i.test(lbl)) { entry.etiqueta = "Aumentada:"; entry.dependsOn = "temperatura_piel"; }
       if (/^disminuida:?$/i.test(lbl)) { entry.etiqueta = "Disminuida:"; entry.dependsOn = "temperatura_piel"; }
+      if (/^no\s+caracter[ií]stica:?$/i.test(lbl)) { entry.etiqueta = "No característica:"; entry.dependsOn = "facies"; }
+      if (/^caracter[ií]stica:?$/i.test(lbl)) { entry.etiqueta = "Característica:"; entry.dependsOn = "facies"; }
+      if (/^no\s+receptivo:?$/i.test(lbl)) { entry.etiqueta = "No receptivo:"; entry.dependsOn = "colaboracion"; }
+      if (/^receptivo:?$/i.test(lbl)) { entry.etiqueta = "Receptivo:"; entry.dependsOn = "colaboracion"; }
     }
     entry.key = key;
     entry.name = el.name || "";
@@ -675,7 +679,7 @@ function dentaiFill(items) {
         }
 
         // Si es campo de observación o descripción clínica, asegurar primera letra con mayúscula
-        if (/areg|ameg|aren|amen|areh|ameh|aumentada|disminuida|describa|observaci/i.test(etiq)) {
+        if (/areg|ameg|aren|amen|areh|ameh|aumentada|disminuida|describa|observaci|caracter[ií]stica|receptivo/i.test(etiq)) {
           if (finalVal.length > 0) {
             finalVal = finalVal.charAt(0).toUpperCase() + finalVal.slice(1);
           }

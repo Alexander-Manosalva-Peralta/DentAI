@@ -801,8 +801,10 @@ async function processText(rawText) {
   // Limpiar prefijo opcional de invocación y muletillas si el doctor lo usó
   let text = rawTrimmed
     .replace(/^(?:dentai|doctor|asistente)[,\s]*/i, "")
-    .replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/i, "")
-    .trim();
+    .replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/i, "");
+  // Limpiar tartamudeo o repeticiones acústicas de Web Speech (ej. "ta ta ta ta ta talla metro 70")
+  text = text.replace(/\b([a-záéíóúñ]{1,4})\b(?:\s+\1\b){2,}/gi, "");
+  text = text.replace(/^(?:\s*(?:ta|te|ti|to|tu|pa|pe|eh|em|um|uh|ah)\b)+/gi, "").trim();
   if (!text) return;
   if (typeof normalizeClinicalAcronyms === "function") {
     text = normalizeClinicalAcronyms(text);

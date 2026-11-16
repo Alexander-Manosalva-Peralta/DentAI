@@ -43,6 +43,18 @@ function setup() {
         w.document.getElementById("renglon_areh").style.display = val === "AREH" ? "" : "none";
         w.document.getElementById("renglon_ameh").style.display = val === "AMEH" ? "" : "none";
       }
+      if (select.name === "facies") {
+        const rNo = w.document.getElementById("renglon_facies_no_caract");
+        const rSi = w.document.getElementById("renglon_facies_caract");
+        if (rNo) rNo.style.display = val === "No característica" ? "" : "none";
+        if (rSi) rSi.style.display = val === "Característica" ? "" : "none";
+      }
+      if (select.name === "colaboracion") {
+        const rRec = w.document.getElementById("renglon_colab_receptivo");
+        const rNoRec = w.document.getElementById("renglon_colab_no_receptivo");
+        if (rRec) rRec.style.display = val === "Receptivo" ? "" : "none";
+        if (rNoRec) rNoRec.style.display = val === "No receptivo" ? "" : "none";
+      }
       if (select.name === "temperatura_piel") {
         w.document.getElementById("renglon_aumentada").style.display = val === "Aumentada" ? "" : "none";
         w.document.getElementById("renglon_disminuida").style.display = val === "Disminuida" ? "" : "none";
@@ -466,4 +478,122 @@ test("variaciones fonéticas de dictado continuo: ARN, a reen, red con deshidrat
   const pBorrarRed = s.propose("borrar red");
   assert.equal(pBorrarRed.handled, true);
   assert.equal(pBorrarRed.entries.find((e) => e.field.etiqueta === "AREG:").valor, "");
+});
+
+test("facies y grado de colaboración: fonética, selección, escritura y borrado de observaciones", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // Facies característica + observación
+  const pFaciesCaract = s.propose("facies característica dolor agudo y asimetría");
+  assert.equal(pFaciesCaract.handled, true);
+  assert.equal(pFaciesCaract.entries.find((e) => e.field.etiqueta === "Facies").valor, "Característica");
+  assert.equal(pFaciesCaract.entries.find((e) => e.field.etiqueta === "Característica:").valor, "Dolor agudo y asimetría");
+
+  // Facies no característica + observación
+  const pFaciesNo = s.propose("facies no característica paciente sin alteraciones");
+  assert.equal(pFaciesNo.handled, true);
+  assert.equal(pFaciesNo.entries.find((e) => e.field.etiqueta === "Facies").valor, "No característica");
+  assert.equal(pFaciesNo.entries.find((e) => e.field.etiqueta === "No característica:").valor, "Paciente sin alteraciones");
+
+  // Escribir dentro de no característica
+  const pEscribeNoCaract = s.propose("escribir dentro de no característica paciente tranquilo");
+  assert.equal(pEscribeNoCaract.handled, true);
+  assert.equal(pEscribeNoCaract.entries.find((e) => e.field.etiqueta === "No característica:").valor, "Paciente tranquilo");
+
+  // Escribir dentro de característica
+  const pEscribeCaract = s.propose("escribir dentro de característica asimetría en mejilla izquierda");
+  assert.equal(pEscribeCaract.handled, true);
+  assert.equal(pEscribeCaract.entries.find((e) => e.field.etiqueta === "Característica:").valor, "Asimetría en mejilla izquierda");
+
+  // Borrar no característica
+  const pBorrarNoCaract = s.propose("borrar no característica");
+  assert.equal(pBorrarNoCaract.handled, true);
+  assert.equal(pBorrarNoCaract.entries.find((e) => e.field.etiqueta === "No característica:").valor, "");
+
+  // Borrar característica
+  const pBorrarCaract = s.propose("borrar característica");
+  assert.equal(pBorrarCaract.handled, true);
+  assert.equal(pBorrarCaract.entries.find((e) => e.field.etiqueta === "Característica:").valor, "");
+
+  // Variaciones fonéticas de Facies (faz, fases, fase, faces)
+  assert.equal(s.propose("faz no característica").entries.find((e) => e.field.etiqueta === "Facies").valor, "No característica");
+  assert.equal(s.propose("fases característica").entries.find((e) => e.field.etiqueta === "Facies").valor, "Característica");
+  assert.equal(s.propose("fase no característica").entries.find((e) => e.field.etiqueta === "Facies").valor, "No característica");
+
+  // Grado de colaboración receptivo + observación
+  const pColabRec = s.propose("grado de colaboración receptivo paciente colabora en todo momento");
+  assert.equal(pColabRec.handled, true);
+  assert.equal(pColabRec.entries.find((e) => e.field.etiqueta === "Grado de Colaboración").valor, "Receptivo");
+  assert.equal(pColabRec.entries.find((e) => e.field.etiqueta === "Receptivo:").valor, "Paciente colabora en todo momento");
+
+  // Grado de colaboración no receptivo + observación
+  const pColabNo = s.propose("grado de colaboración no receptivo paciente temeroso e inquieto");
+  assert.equal(pColabNo.handled, true);
+  assert.equal(pColabNo.entries.find((e) => e.field.etiqueta === "Grado de Colaboración").valor, "No receptivo");
+  assert.equal(pColabNo.entries.find((e) => e.field.etiqueta === "No receptivo:").valor, "Paciente temeroso e inquieto");
+
+  // Escribir dentro de receptivo
+  const pEscribeRec = s.propose("escribir dentro de receptivo muy colaborador");
+  assert.equal(pEscribeRec.handled, true);
+  assert.equal(pEscribeRec.entries.find((e) => e.field.etiqueta === "Receptivo:").valor, "Muy colaborador");
+
+  // Escribir dentro de no receptivo
+  const pEscribeNoRec = s.propose("escribir dentro de no receptivo ansiedad marcada");
+  assert.equal(pEscribeNoRec.handled, true);
+  assert.equal(pEscribeNoRec.entries.find((e) => e.field.etiqueta === "No receptivo:").valor, "Ansiedad marcada");
+
+  // Borrar receptivo
+  const pBorrarRec = s.propose("borrar receptivo");
+  assert.equal(pBorrarRec.handled, true);
+  assert.equal(pBorrarRec.entries.find((e) => e.field.etiqueta === "Receptivo:").valor, "");
+
+  // Borrar no receptivo
+  const pBorrarNoRec = s.propose("borrar no receptivo");
+  assert.equal(pBorrarNoRec.handled, true);
+  assert.equal(pBorrarNoRec.entries.find((e) => e.field.etiqueta === "No receptivo:").valor, "");
+
+  // Llenado en DOM simulado con dentaiFill
+  s.w.document.querySelector('[name="facies"]').value = "No característica";
+  s.w.document.getElementById("renglon_facies_no_caract").style.display = "";
+  s.w.dentaiFill(s.items("escribir dentro de no característica paciente tranquilo"));
+  assert.equal(s.w.document.querySelector('[name="facies_no_caract_obs"]').value, "Paciente tranquilo");
+});
+
+test("talla con modismos 'metro 70' y filtro anti-tartamudeo 'ta ta ta talla'", (t) => {
+  const s = setup(); t.after(s.close);
+
+  // "talla metro 70" -> 1.70
+  const pM70 = s.propose("talla metro 70");
+  assert.equal(pM70.handled, true);
+  assert.equal(pM70.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
+
+  // "talla metro con 70" -> 1.70
+  const pMCon70 = s.propose("talla metro con 70");
+  assert.equal(pMCon70.handled, true);
+  assert.equal(pMCon70.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
+
+  // "talla metro setenta" -> 1.70
+  const pMSetenta = s.propose("talla metro setenta");
+  assert.equal(pMSetenta.handled, true);
+  assert.equal(pMSetenta.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
+
+  // "talla metro y medio" -> 1.50
+  const pMMedio = s.propose("talla metro y medio");
+  assert.equal(pMMedio.handled, true);
+  assert.equal(pMMedio.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.50");
+
+  // "talla metro sesenta y cinco" -> 1.65
+  const pM65 = s.propose("talla metro sesenta y cinco");
+  assert.equal(pM65.handled, true);
+  assert.equal(pM65.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.65");
+
+  // "talla un metro 70" -> 1.70
+  const pUnM70 = s.propose("talla un metro 70");
+  assert.equal(pUnM70.handled, true);
+  assert.equal(pUnM70.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
+
+  // Limpieza de tartamudeo repetido: "ta ta ta ta ta ... talla metro 70"
+  const pStutter = s.propose("ta ta ta ta ta ta ta ta ta ta ta ta ta talla metro 70");
+  assert.equal(pStutter.handled, true);
+  assert.equal(pStutter.entries.find((e) => e.field.etiqueta.includes("Talla")).valor, "1.70");
 });

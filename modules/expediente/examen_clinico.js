@@ -24,8 +24,15 @@ function normalizeClinicalAcronyms(text) {
   if (!text) return "";
   let t = text;
 
-  // 0. Limpiar muletillas de inicio en dictado continuo/corrido
+  // 0. Limpiar tartamudeo o repeticiones acústicas de Web Speech (ej. "ta ta ta ta ta talla metro 70")
+  t = t.replace(/\b([a-záéíóúñ]{1,4})\b(?:\s+\1\b){2,}/gi, "");
+  t = t.replace(/^(?:\s*(?:ta|te|ti|to|tu|pa|pe|eh|em|um|uh|ah)\b)+/gi, "").trim();
+
+  // Limpiar muletillas de inicio en dictado continuo/corrido
   t = t.replace(/^(?:listo|ya|bueno|bien|ok|a\s+ver|ahora|siguiente|luego)[,\s]+/gi, "");
+
+  // Diccionario fonético para Facies (faz, fases, fase, faces, fascies, facie, fascie, face)
+  t = t.replace(/\b(?:fa[sc]+ies?|fa[sc]+ie|faces?|fases?|faz)\b/gi, "facies");
 
   // 1. ABEH / AREH / AMEH (tolerancia a 'hache', 'h' final, letras separadas, terminación en 'a')
   t = t.replace(/\b(?:a\s+meh\s+h(?:ache)?|ameh\s+h(?:ache)?|ame\s+hache|a\s+me\s+h|a\s+m\s+e\s+h|a\s+meh|ameh|am\s+eh|a\s+m\s+h|amh|ameha|dameh)\b/gi, "AMEH");
@@ -226,18 +233,72 @@ function extractEctoscopia(text) {
     res.necesidadesEspeciales = "No";
   }
 
-  // Facies (y "fascies" con s intermedia)
-  if (/\b(?:fa[sc]+ies?\s+caracter[ií]stica|fa[sc]+ie\s+caracter[ií]stica|facies\s+caracter[ií]stico|fascies\s+caracter[ií]stico)\b/i.test(norm) && !/no\s+caracter[ií]stica/i.test(norm)) {
+  // Facies (y variaciones: fascies, faz, fases, faces, facie)
+  const isBorrarNoCaract = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?no\s+caracter[ií]stica\b/i.test(norm);
+  const isBorrarCaract = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?caracter[ií]stica\b/i.test(norm) && !isBorrarNoCaract;
+
+  if (isBorrarNoCaract) {
+    res.facies = "No característica";
+    res.obsFaciesNoCaracteristica = "";
+  } else if (isBorrarCaract) {
     res.facies = "Característica";
-  } else if (/\b(?:fa[sc]+ies?\s+no\s+caracter[ií]stica|fa[sc]+ie\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)\b/i.test(norm)) {
+    res.obsFaciesCaracteristica = "";
+  }
+
+  // "escribir dentro de no característica [texto]" o "facies no característica [texto]"
+  const mFaciesNo = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?no\s+caracter[ií]stica|facies\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
+  if (!isBorrarNoCaract && mFaciesNo && mFaciesNo[1].trim().length > 2) {
+    res.facies = "No característica";
+    let obs = mFaciesNo[1].trim().replace(/^(?:(?:facies\s+)?no\s+caracter[ií]stica\s*[,;:]?\s*)+/i, "")
+      .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+    if (obs.length > 2) res.obsFaciesNoCaracteristica = capitalizeFirstLetter(obs);
+  } else if (!isBorrarNoCaract && !res.facies && /\b(?:facies\s+no\s+caracter[ií]stica|no\s+caracter[ií]stica)\b/i.test(norm)) {
     res.facies = "No característica";
   }
 
-  // Grado de Colaboración (Receptivo / No receptivo / Colaborador)
-  if (/\b(?:receptivo|paciente\s+receptivo|colaboraci[oó]n\s+receptivo|colaborador|buena\s+colaboraci[oó]n)\b/i.test(norm) && !/no\s+receptivo|poco\s+receptivo/i.test(norm)) {
-    res.colaboracion = "Receptivo";
-  } else if (/\b(?:no\s+receptivo|paciente\s+no\s+receptivo|poco\s+receptivo|no\s+colaborador|poco\s+colaborador)\b/i.test(norm)) {
+  // "escribir dentro de característica [texto]" o "facies característica [texto]"
+  const mFaciesSi = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?caracter[ií]stica|facies\s+caracter[ií]stica)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:grado\s+de\s+colaboraci[oó]n|receptivo|no\s+receptivo|peso|talla|temperatura|confirmar|$))/i);
+  if (!isBorrarCaract && !res.facies && mFaciesSi && mFaciesSi[1].trim().length > 2) {
+    res.facies = "Característica";
+    let obs = mFaciesSi[1].trim().replace(/^(?:(?:facies\s+)?caracter[ií]stica\s*[,;:]?\s*)+/i, "")
+      .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+    if (obs.length > 2) res.obsFaciesCaracteristica = capitalizeFirstLetter(obs);
+  } else if (!isBorrarCaract && !res.facies && /\b(?:facies\s+caracter[ií]stica|facies\s+caracter[ií]stico)\b/i.test(norm)) {
+    res.facies = "Característica";
+  }
+
+  // Grado de Colaboración (Receptivo / No receptivo)
+  const isBorrarNoReceptivo = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?no\s+receptivo\b/i.test(norm);
+  const isBorrarReceptivo = /\b(?:borrar|borra|limpiar|limpia|vaciar|vacia)\s+(?:la\s+)?(?:descripci[oó]n\s+(?:de\s+)?|observaci[oó]n\s+(?:de\s+)?)?receptivo\b/i.test(norm) && !isBorrarNoReceptivo;
+
+  if (isBorrarNoReceptivo) {
     res.colaboracion = "No receptivo";
+    res.obsColaboracionNoReceptivo = "";
+  } else if (isBorrarReceptivo) {
+    res.colaboracion = "Receptivo";
+    res.obsColaboracionReceptivo = "";
+  }
+
+  // "escribir dentro de no receptivo [texto]" o "grado de colaboración no receptivo [texto]"
+  const mColabNo = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?no\s+receptivo|colaboraci[oó]n\s+no\s+receptivo|no\s+receptivo)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:peso|talla|temperatura|confirmar|$))/i);
+  if (!isBorrarNoReceptivo && mColabNo && mColabNo[1].trim().length > 2) {
+    res.colaboracion = "No receptivo";
+    let obs = mColabNo[1].trim().replace(/^(?:(?:grado\s+de\s+colaboraci[oó]n|colaboraci[oó]n|paciente)\s+no\s+receptivo\s*[,;:]?\s*)+/i, "")
+      .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+    if (obs.length > 2) res.obsColaboracionNoReceptivo = capitalizeFirstLetter(obs);
+  } else if (!isBorrarNoReceptivo && !res.colaboracion && /\b(?:no\s+receptivo|poco\s+receptivo|no\s+colaborador)\b/i.test(norm)) {
+    res.colaboracion = "No receptivo";
+  }
+
+  // "escribir dentro de receptivo [texto]" o "grado de colaboración receptivo [texto]"
+  const mColabSi = cleanedText.match(/(?:(?:escribir|escribe|cambiar|cambia|editar|edita|modificar|modifica|poner|anotar)(?:\s+(?:en|dentro\s+de))?\s+(?:observaci[oó]n\s+|descripci[oó]n\s+)?receptivo|colaboraci[oó]n\s+receptivo|paciente\s+receptivo|receptivo)(?:\s*[,;:]\s*|\s+(?:con\s+)?(?:observaci[oó]n:?|descripci[oó]n:?|(?:el\s+)?paciente\s+(?:refiere|presenta|est[aá]|con)|debido\s+a)?\s*)(.+?)(?=(?:,\s*)?(?:peso|talla|temperatura|confirmar|$))/i);
+  if (!isBorrarReceptivo && !res.colaboracion && mColabSi && mColabSi[1].trim().length > 2) {
+    res.colaboracion = "Receptivo";
+    let obs = mColabSi[1].trim().replace(/^(?:(?:grado\s+de\s+colaboraci[oó]n|colaboraci[oó]n|paciente)\s+receptivo\s*[,;:]?\s*)+/i, "")
+      .replace(/^(?:es|de|con|observaci[oó]n:?|descripci[oó]n:?)\s+/i, "");
+    if (obs.length > 2) res.obsColaboracionReceptivo = capitalizeFirstLetter(obs);
+  } else if (!isBorrarReceptivo && !res.colaboracion && /\b(?:receptivo|colaborador|buena\s+colaboraci[oó]n)\b/i.test(norm)) {
+    res.colaboracion = "Receptivo";
   }
 
   return res;
@@ -246,7 +307,12 @@ function extractEctoscopia(text) {
 // 2. Extraer Peso, Talla y Cálculo Automático de IMC
 function extractPesoTalla(text) {
   if (!text) return {};
-  const norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  let norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // Limpiar tartamudeo o repeticiones si quedaron
+  norm = norm.replace(/\b([a-z]{1,4})\b(?:\s+\1\b){2,}/gi, "");
+  norm = norm.replace(/^(?:\s*(?:ta|te|ti|to|tu|pa|pe|eh|em|um|uh|ah)\b)+/gi, "").trim();
+
   const res = {};
 
   // Peso (Kg)
@@ -256,19 +322,47 @@ function extractPesoTalla(text) {
     res.peso = mPeso[1].replace(",", ".");
   }
 
-  // Talla (M) - ej: "talla 1.40 m", "talla 140 cm", "talla 1 metro 40", "1.40"
-  const mTalla = norm.match(/(?:talla|estatura|mide)\s*(?:es|de|:)?\s*(\d{2,3}\s*cm|\d\s*(?:metro[s]?|m)\s*\d{1,2}|\d[.,]\d{1,2}|\d{3}|\d)/i);
-  if (mTalla) {
-    let tRaw = mTalla[1].trim();
-    if (/\d{2,3}\s*cm/i.test(tRaw)) {
-      const cm = parseInt(tRaw, 10);
-      res.talla = (cm / 100).toFixed(2);
-    } else {
-      let tVal = tRaw.replace(/metro[s]?|m/i, ".").replace(/\s+/g, "").replace(",", ".");
-      if (tVal.length === 3 && !tVal.includes(".")) {
-        tVal = `${tVal[0]}.${tVal.slice(1)}`; // ej: "140" -> "1.40"
+  // Talla (M) - Conversión de palabras numéricas comunes
+  const wordMap = {
+    "cero": 0, "un": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11,
+    "doce": 12, "trece": 13, "catorce": 14, "quince": 15, "dieciseis": 16,
+    "diecisiete": 17, "dieciocho": 18, "diecinueve": 19, "veinte": 20,
+    "veintiuno": 21, "veintidos": 22, "veintitres": 23, "veinticuatro": 24,
+    "veinticinco": 25, "veintiseis": 26, "veintisiete": 27, "veintiocho": 28, "veintinueve": 29,
+    "treinta": 30, "cuarenta": 40, "cincuenta": 50, "sesenta": 60, "setenta": 70,
+    "ochenta": 80, "noventa": 90, "medio": 50
+  };
+
+  let normTalla = norm
+    .replace(/\b(treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)\s+y\s+(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\b/gi, (m, d, u) => {
+      return String(wordMap[d] + wordMap[u]);
+    })
+    .replace(/\b(treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|medio)\b/gi, (m, d) => {
+      return String(wordMap[d]);
+    });
+
+  // Caso: "talla metro 70", "talla metro con 70", "talla metro y 70", "talla un metro 70", "talla 1 metro 70"
+  const mTallaMetro = normTalla.match(/(?:talla|estatura|mide)\s*(?:es|de|:)?\s*(?:(?:1|un)\s*)?metro[s]?\s*(?:con|y)?\s*(\d{1,2})\b/i);
+  if (mTallaMetro) {
+    let decimals = mTallaMetro[1];
+    if (decimals.length === 1) decimals += "0";
+    res.talla = `1.${decimals}`;
+  } else {
+    // Talla estándar: "talla 1.70 m", "talla 140 cm", "talla 170"
+    const mTalla = normTalla.match(/(?:talla|estatura|mide)\s*(?:es|de|:)?\s*(\d{2,3}\s*cm|\d\s*(?:metro[s]?|m)\s*\d{1,2}|\d[.,]\d{1,2}|\d{3})/i);
+    if (mTalla) {
+      let tRaw = mTalla[1].trim();
+      if (/\d{2,3}\s*cm/i.test(tRaw)) {
+        const cm = parseInt(tRaw, 10);
+        res.talla = (cm / 100).toFixed(2);
+      } else {
+        let tVal = tRaw.replace(/metro[s]?|m/i, ".").replace(/\s+/g, "").replace(",", ".");
+        if (tVal.length === 3 && !tVal.includes(".")) {
+          tVal = `${tVal[0]}.${tVal.slice(1)}`; // "170" -> "1.70"
+        }
+        res.talla = tVal;
       }
-      res.talla = tVal;
     }
   }
 
@@ -571,9 +665,25 @@ function proposeExamenClinico(text, fields) {
     const f = findF(/^facies?$|^fascies?$/i);
     if (f) entries.push({ field: f, valor: ecto.facies });
   }
+  if (ecto.obsFaciesNoCaracteristica !== undefined) {
+    const f = findF(/^no\s+caracter[ií]stica:?$/i);
+    if (f) entries.push({ field: f, valor: ecto.obsFaciesNoCaracteristica });
+  }
+  if (ecto.obsFaciesCaracteristica !== undefined) {
+    const f = findF(/^caracter[ií]stica:?$/i);
+    if (f) entries.push({ field: f, valor: ecto.obsFaciesCaracteristica });
+  }
   if (ecto.colaboracion) {
     const f = findF(/colaboraci[oó]n/i);
     if (f) entries.push({ field: f, valor: ecto.colaboracion });
+  }
+  if (ecto.obsColaboracionReceptivo !== undefined) {
+    const f = findF(/^receptivo:?$/i);
+    if (f) entries.push({ field: f, valor: ecto.obsColaboracionReceptivo });
+  }
+  if (ecto.obsColaboracionNoReceptivo !== undefined) {
+    const f = findF(/^no\s+receptivo:?$/i);
+    if (f) entries.push({ field: f, valor: ecto.obsColaboracionNoReceptivo });
   }
 
   // Peso, Talla e IMC
