@@ -56,6 +56,12 @@ function dentaiScan(anamnesisFields = []) {
       return ph;
     }
 
+    const earlyName = clean(el.name || el.id || el.title);
+    if (/paterno|primer.*apellido|ape.*pat/i.test(earlyName)) return "PRIMER APELLIDO";
+    if (/materno|segundo.*apellido|ape.*mat/i.test(earlyName)) return "SEGUNDO APELLIDO";
+    if (/fec.*nac|fecha.*nac|nacimiento/i.test(earlyName)) return "*Fecha Nacimiento";
+    if (/genero|sexo/i.test(earlyName)) return "Género";
+
     if (el.type === "checkbox" || el.type === "radio") {
       if (el.nextSibling && clean(el.nextSibling.textContent)) {
         const t = clean(el.nextSibling.textContent);
@@ -393,6 +399,7 @@ function dentaiScan(anamnesisFields = []) {
     entry.key = key;
     entry.name = el.name || "";
     entry.domId = el.id || "";
+    entry.placeholder = el.placeholder || "";
     entry.enfocado = document.activeElement === el;
     k++;
     out.push(entry);

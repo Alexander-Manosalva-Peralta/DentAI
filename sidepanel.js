@@ -589,30 +589,73 @@ async function buscarPaciente(dni, s) {
         headers: { Authorization: `Bearer ${s.dniApiToken}`, Accept: "application/json" },
       });
       if (res.ok) {
-        const data = await res.json();
+        const rawJson = await res.json();
+        const data = rawJson.data || rawJson.result || rawJson.persona || rawJson;
         
         // Parsear y formatear fecha de nacimiento si viene disponible (ej: YYYY-MM-DD -> DD/MM/YYYY)
-        let fNac = (data.fecha_nacimiento || data.fechaNacimiento || data.birth_date || "").trim();
+        let fNac = (data.fecha_nacimiento || data.fechaNacimiento || data.birth_date || data.birthdate || data.nacimiento || "").trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(fNac)) {
           const [y, m, d] = fNac.split("-");
           fNac = `${d}/${m}/${y}`;
         }
 
         // Parsear género / sexo si viene disponible
-        let genRaw = (data.genero || data.sexo || data.gender || "").toUpperCase().trim();
+        let genRaw = (data.genero || data.sexo || data.gender || data.sex || "").toUpperCase().trim();
         let genero = null;
-        if (genRaw.startsWith("M") || genRaw === "1") genero = "MASCULINO";
-        else if (genRaw.startsWith("F") || genRaw === "2") genero = "FEMENINO";
+        if (genRaw.startsWith("M") || genRaw === "1" || genRaw === "H" || genRaw === "MASCULINO") genero = "MASCULINO";
+        else if (genRaw.startsWith("F") || genRaw === "2" || genRaw === "FEMENINO") genero = "FEMENINO";
+
+        let nom = (data.nombres || data.nombre || data.first_name || data.firstName || data.prenombres || "").trim();
+        let apePat = (data.apellidoPaterno || data.apellido_paterno || data.primer_apellido || data.primerApellido || data.first_surname || data.firstSurname || data.paterno || data.apellido1 || "").trim();
+        let apeMat = (data.apellidoMaterno || data.apellido_materno || data.segundo_apellido || data.segundoApellido || data.second_surname || data.secondSurname || data.materno || data.apellido2 || "").trim();
+
+        // Si los apellidos vienen juntos en un campo único
+        const apellidosJuntos = (data.apellidos || data.last_name || data.apellidosCompletos || "").trim();
+        if ((!apePat || !apeMat) && apellidosJuntos) {
+          const parts = apellidosJuntos.split(/\s+/).filter(Boolean);
+          if (parts.length >= 2) {
+            if (!apePat) apePat = parts[0];
+            if (!apeMat) apeMat = parts.slice(1).join(" ");
+          } else if (parts.length === 1 && !apePat) {
+            apePat = parts[0];
+          }
+        }
+
+        // Desglose de nombre completo si los apellidos no vinieron en campos separados
+        const full = (data.nombreCompleto || data.nombre_completo || data.full_name || data.name || "").trim();
+        if ((!apePat || !apeMat) && full) {
+          const parts = full.split(/\s+/).filter(Boolean);
+          if (parts.length >= 3) {
+            if (!nom) {
+              apePat = parts[0];
+              apeMat = parts[1];
+              nom = parts.slice(2).join(" ");
+            } else {
+              apeMat = parts[parts.length - 1];
+              apePat = parts[parts.length - 2];
+            }
+          }
+        }
+
+        // Inferencia inteligente de género si RENIEC no lo devuelve en el endpoint básico
+        if (!genero && nom) {
+          const primerNom = nom.split(/\s+/)[0].toUpperCase();
+          if (/^(JUAN|JOSE|JOSÉ|LUIS|CARLOS|MIGUEL|JORGE|VICTOR|VÍCTOR|CESAR|CÉSAR|MANUEL|PEDRO|JESUS|JESÚS|ANGEL|ÁNGEL|DIEGO|DAVID|DANIEL|FERNANDO|EDUARDO|ALEJANDRO|RICARDO|MICHAEL|RICHARD|CRISTIAN|CHRISTIAN|GABRIEL|MARIO|OSCAR|ÓSCAR|ROBERTO|RAFAEL|JULIO|RUBEN|RUBÉN|SEBASTIAN|SEBASTIÁN|RODRIGO|ALONSO|ALVARO|ÁLVARO|MARTIN|MARTÍN|GONZALO|GUSTAVO|SERGIO|ANDRES|ANDRÉS|FRANCISCO|HECTOR|HÉCTOR|HUGO|JAIME|PABLO|RAUL|RAÚL|RENATO|ALFREDO|ANTONIO|ARTURO|EDGAR|ENRIQUE|GUILLERMO|JAVIER|LEONARDO|MARCOS|MAURICIO|PAULO|WALTER|WILSON|YOJAN|YOHAN|JOHAN)$/i.test(primerNom)) {
+            genero = "MASCULINO";
+          } else if (/^(MARIA|MARÍA|ANA|ROSA|CARMEN|LUZ|FLOR|JUANA|TERESA|MARTHA|ELENA|GLORIA|SILVIA|PATRICIA|YOLANDA|ISABEL|ROCIO|ROCÍO|ELIZABETH|SONIA|PILAR|SUSANA|JULIA|CECILIA|BEATRIZ|BLANCA|GABRIELA|LUCIA|LUCÍA|VANESSA|SANDRA|PAOLA|CLAUDIA|VERONICA|VERÓNICA|JESSICA|DIANA|MILAGROS|ANDREA|CAROLINA|DANIELA|STEPHANIE|STEFANY|VALERIA|CAMILA|FIORELLA|ADRIANA|ALEJANDRA|LILIANA|MARITZA|MIRIAN|MIRTH|MONICA|MÓNICA|NATALIA|NATALY|SOFIA|SOFÍA|WENDY)$/i.test(primerNom)) {
+            genero = "FEMENINO";
+          }
+        }
 
         return {
           origen: "RENIEC",
           dni: dni,
-          nombres: (data.nombres || data.nombre || data.first_name || "").trim(),
-          apellidoPaterno: (data.apellidoPaterno || data.primer_apellido || data.apellido_paterno || data.first_surname || "").trim(),
-          apellidoMaterno: (data.apellidoMaterno || data.segundo_apellido || data.apellido_materno || data.second_surname || "").trim(),
+          nombres: nom,
+          apellidoPaterno: apePat,
+          apellidoMaterno: apeMat,
           genero: genero,
           fechaNacimiento: fNac || null,
-          direccion: (data.direccion || data.address || data.domicilio || "").trim() || null,
+          direccion: (data.direccion || data.direccion_completa || data.address || data.domicilio || "").trim() || null,
           departamento: (data.departamento || data.department || "").trim() || null,
           provincia: (data.provincia || data.province || "").trim() || null,
           distrito: (data.distrito || data.district || "").trim() || null
@@ -633,9 +676,9 @@ function poblarCamposPaciente(patient) {
   const addedLabels = [];
 
   // Nombres y Apellidos (No sobreescribir si fueron rectificados manualmente por voz)
-  const nomField = findField(/identificacion/i, /^nombre$/i);
-  const patField = findField(/identificacion/i, /primer\s+apellido/i);
-  const matField = findField(/identificacion/i, /segundo\s+apellido/i);
+  const nomField = findField(/identificacion/i, /^nombre$/i) || findField(null, /^nombre$/i);
+  const patField = findField(/identificacion/i, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*surname/i) || findField(null, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*surname/i);
+  const matField = findField(/identificacion/i, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*surname/i) || findField(null, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*surname/i);
   if (nomField && patient.nombres && !state.lockedFields.has(nomField.id)) {
     state.pending.set(nomField.id, { valor: patient.nombres, label: "Nombre" });
     addedLabels.push("Nombre");
@@ -651,7 +694,7 @@ function poblarCamposPaciente(patient) {
 
   // Género
   if (patient.genero) {
-    const genField = findField(/identificacion/i, /genero|sexo/i);
+    const genField = findField(/identificacion/i, /genero|sexo/i) || findField(null, /genero|sexo/i);
     if (genField && !state.lockedFields.has(genField.id)) {
       state.pending.set(genField.id, { valor: patient.genero, label: "Género" });
       addedLabels.push("Género");
@@ -660,7 +703,7 @@ function poblarCamposPaciente(patient) {
 
   // Fecha de Nacimiento
   if (patient.fechaNacimiento) {
-    const nacField = findField(/identificacion/i, /nacimiento/i);
+    const nacField = findField(/identificacion/i, /nacimiento|fecha.*nac/i) || findField(null, /nacimiento|fecha.*nac/i);
     if (nacField && !state.lockedFields.has(nacField.id)) {
       state.pending.set(nacField.id, { valor: patient.fechaNacimiento, label: "Fecha Nacimiento" });
       addedLabels.push("Fecha Nacimiento");
@@ -713,22 +756,22 @@ function poblarCamposPaciente(patient) {
     }
   }
   if (patient.referencia) {
-    const refField = findField(/direcci[oó]n/i, /referencia/i);
+    const refField = findField(/direcci[oó]n/i, /referencia/i) || findField(null, /referencia/i);
     if (refField && !state.lockedFields.has(refField.id)) {
       state.pending.set(refField.id, { valor: patient.referencia, label: "Referencia" });
       addedLabels.push("Referencia");
     }
   }
   if (patient.departamento) {
-    const depField = findField(/direcci[oó]n/i, /departamento/i);
+    const depField = findField(/direcci[oó]n/i, /departamento/i) || findField(null, /departamento/i);
     if (depField) { state.pending.set(depField.id, { valor: patient.departamento, label: "Departamento" }); addedLabels.push("Departamento"); }
   }
   if (patient.provincia) {
-    const provField = findField(/direcci[oó]n/i, /provincia/i);
+    const provField = findField(/direcci[oó]n/i, /provincia/i) || findField(null, /provincia/i);
     if (provField) { state.pending.set(provField.id, { valor: patient.provincia, label: "Provincia" }); addedLabels.push("Provincia"); }
   }
   if (patient.distrito) {
-    const distField = findField(/direcci[oó]n/i, /distrito/i);
+    const distField = findField(/direcci[oó]n/i, /distrito/i) || findField(null, /distrito/i);
     if (distField) { state.pending.set(distField.id, { valor: patient.distrito, label: "Distrito" }); addedLabels.push("Distrito"); }
   }
 
@@ -784,13 +827,14 @@ function findField(secPattern, etPattern) {
       const etNorm = norm(f.etiqueta);
       const nameNorm = norm(f.name);
       const idNorm = norm(f.domId);
+      const phNorm = norm(f.placeholder);
 
       // Si se busca Calle, descartar terminantemente campos de No. Exterior
-      if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm))) {
+      if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
         return false;
       }
 
-      return secPattern.test(secNorm) && (etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm));
+      return secPattern.test(secNorm) && (etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm) || etPattern.test(phNorm));
     });
   }
 
@@ -801,12 +845,13 @@ function findField(secPattern, etPattern) {
     const etNorm = norm(f.etiqueta);
     const nameNorm = norm(f.name);
     const idNorm = norm(f.domId);
+    const phNorm = norm(f.placeholder);
 
-    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm))) {
+    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
       return false;
     }
 
-    return etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm);
+    return etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm) || etPattern.test(phNorm);
   });
   if (nonFactura) return nonFactura;
 
@@ -815,12 +860,13 @@ function findField(secPattern, etPattern) {
     const etNorm = norm(f.etiqueta);
     const nameNorm = norm(f.name);
     const idNorm = norm(f.domId);
+    const phNorm = norm(f.placeholder);
 
-    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm))) {
+    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
       return false;
     }
 
-    return etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm);
+    return etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm) || etPattern.test(phNorm);
   });
 }
 
