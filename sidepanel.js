@@ -590,12 +590,32 @@ async function buscarPaciente(dni, s) {
       });
       if (res.ok) {
         const data = await res.json();
+        
+        // Parsear y formatear fecha de nacimiento si viene disponible (ej: YYYY-MM-DD -> DD/MM/YYYY)
+        let fNac = (data.fecha_nacimiento || data.fechaNacimiento || data.birth_date || "").trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(fNac)) {
+          const [y, m, d] = fNac.split("-");
+          fNac = `${d}/${m}/${y}`;
+        }
+
+        // Parsear género / sexo si viene disponible
+        let genRaw = (data.genero || data.sexo || data.gender || "").toUpperCase().trim();
+        let genero = null;
+        if (genRaw.startsWith("M") || genRaw === "1") genero = "MASCULINO";
+        else if (genRaw.startsWith("F") || genRaw === "2") genero = "FEMENINO";
+
         return {
           origen: "RENIEC",
           dni: dni,
-          nombres: (data.nombres || data.nombre || "").trim(),
-          apellidoPaterno: (data.apellidoPaterno || data.primer_apellido || data.apellido_paterno || "").trim(),
-          apellidoMaterno: (data.apellidoMaterno || data.segundo_apellido || data.apellido_materno || "").trim(),
+          nombres: (data.nombres || data.nombre || data.first_name || "").trim(),
+          apellidoPaterno: (data.apellidoPaterno || data.primer_apellido || data.apellido_paterno || data.first_surname || "").trim(),
+          apellidoMaterno: (data.apellidoMaterno || data.segundo_apellido || data.apellido_materno || data.second_surname || "").trim(),
+          genero: genero,
+          fechaNacimiento: fNac || null,
+          direccion: (data.direccion || data.address || data.domicilio || "").trim() || null,
+          departamento: (data.departamento || data.department || "").trim() || null,
+          provincia: (data.provincia || data.province || "").trim() || null,
+          distrito: (data.distrito || data.district || "").trim() || null
         };
       }
     } catch (e) {
