@@ -86,6 +86,46 @@ test("Factura: extrae comandos de voz para campos específicos de Factura", (t) 
   assert.ok(res10);
   assert.equal(res10.type, "documento");
   assert.equal(res10.value, "20123456789");
+
+  // Casos reportados por Yojan con acentos y factura al final:
+  const res11 = w.extractFacturaFieldCommand("edita número exterior de factura 552");
+  assert.ok(res11);
+  assert.equal(res11.type, "exterior");
+  assert.equal(res11.value, "552");
+
+  const res12 = w.extractFacturaFieldCommand("edita tipo de identificación RUC dentro de factura");
+  assert.ok(res12);
+  assert.equal(res12.type, "tipo_documento");
+  assert.equal(res12.value, "RUC");
+
+  const res13 = w.extractFacturaFieldCommand("aedita tipo de identificación RUC dentro de factura");
+  assert.ok(res13);
+  assert.equal(res13.type, "tipo_documento");
+  assert.equal(res13.value, "RUC");
+
+  const res14 = w.extractFacturaFieldCommand("edita calle de factura Girón Honorio delgado");
+  assert.ok(res14);
+  assert.equal(res14.type, "calle");
+  assert.equal(res14.value, "Girón Honorio delgado");
+});
+
+test("Factura: toggle de requerir factura soporta 'querer', 'quiere', 'requerir' y no se confunde con edición", (t) => {
+  const { w, close } = setupEnv();
+  t.after(close);
+
+  assert.equal(w.extractFactura("si va a querer factura"), "Si");
+  assert.equal(w.extractFactura("va a querer factura"), "Si");
+  assert.equal(w.extractFactura("si va a requerir factura"), "Si");
+  assert.equal(w.extractFactura("va a requerir factura"), "Si");
+  assert.equal(w.extractFactura("con factura"), "Si");
+  assert.equal(w.extractFactura("no va a querer factura"), "No");
+  assert.equal(w.extractFactura("no va a requerir factura"), "No");
+  assert.equal(w.extractFactura("sin factura"), "No");
+
+  // Cuando se editan campos, NUNCA debe disparar el toggle de factura
+  assert.equal(w.extractFactura("edita calle de factura Girón Honorio delgado"), null);
+  assert.equal(w.extractFactura("edita número exterior de factura 552"), null);
+  assert.equal(w.extractFactura("aedita tipo de identificación RUC dentro de factura"), null);
 });
 
 test("Dirección General: comandos sin 'factura' NO son interceptados por Factura", (t) => {

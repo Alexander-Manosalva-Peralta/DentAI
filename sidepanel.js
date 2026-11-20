@@ -1219,39 +1219,10 @@ async function processText(rawText) {
     return;
   }
 
-  // ACCIONES DIRECTAS DE FACTURACIÓN Y CHECKBOXES RÁPIDOS
-  const facDirect = extractFactura(text);
-  if (facDirect && /(?:factura|requerir)/i.test(normRaw)) {
-    const f = findField(/factura/i, /factura/i) || findField(null, /factura/i);
-    if (f) {
-      state.pending.set(f.id, { valor: facDirect, label: "Va a requerir factura?" });
-      renderPending();
-      speak("Listo.");
-      setStatus(`Factura: ${facDirect}.`);
-      await apply();
-      setTimeout(async () => { await scan(); }, 600);
-      return;
-    }
-  }
-
-  const igDirect = extractDatosIgualesDireccion(text);
-  if (igDirect) {
-    const f = findField(/factura/i, /igual.*direc/i) || findField(null, /igual.*direc/i);
-    if (f) {
-      state.pending.set(f.id, { valor: igDirect, label: "Los datos son iguales a la dirección" });
-      renderPending();
-      speak("Listo.");
-      setStatus(`Datos iguales a dirección: ${igDirect}.`);
-      await apply();
-      setTimeout(async () => { await scan(); }, 600);
-      return;
-    }
-  }
-
   // COMANDOS DIRIGIDOS ESPECÍFICAMENTE A LA SECCIÓN FACTURA
-  // Desambigua campos duplicados: Calle, No. Exterior, País, Departamento, Provincia, Distrito, Correo, Documento
+  // Desambigua campos duplicados: Calle, No. Exterior, País, Departamento, Provincia, Distrito, Correo, Documento, Tipo Identificación
   // ante dictados como: "edita calle de factura", "dentro de factura edita calle", "en factura edita país",
-  // "datos de factura calle", "cambia datos de factura calle", "edita razón social", etc.
+  // "edita tipo de identificación RUC dentro de factura", "edita número exterior de factura 552", "edita razón social", etc.
   const facFieldCmd = typeof extractFacturaFieldCommand === "function" ? extractFacturaFieldCommand(text) : null;
   if (facFieldCmd) {
     let f = null;
@@ -1291,9 +1262,47 @@ async function processText(rawText) {
     if (f) {
       state.pending.set(f.id, { valor: facFieldCmd.value, label: facFieldCmd.field });
       state.lockedFields.add(f.id);
+
+      // Si se edita un campo en Factura (que no sea razón social), asegurar que "Los datos son iguales a la dirección" sea No
+      if (facFieldCmd.type !== "razon_social") {
+        const igField = findField(/factura/i, /igual.*direc/i);
+        if (igField) {
+          state.pending.set(igField.id, { valor: "No", label: "Los datos son iguales a la dirección" });
+        }
+      }
+
       renderPending();
       speak("Listo.");
       setStatus(`${facFieldCmd.field}: "${facFieldCmd.value}". Di "confirmar".`);
+      return;
+    }
+  }
+
+  // ACCIONES DIRECTAS DE FACTURACIÓN Y CHECKBOXES RÁPIDOS (TOGGLES SÍ/NO)
+  const facDirect = extractFactura(text);
+  if (facDirect) {
+    const f = findField(/factura/i, /factura/i) || findField(null, /factura/i);
+    if (f) {
+      state.pending.set(f.id, { valor: facDirect, label: "Va a requerir factura?" });
+      renderPending();
+      speak("Listo.");
+      setStatus(`Factura: ${facDirect}.`);
+      await apply();
+      setTimeout(async () => { await scan(); }, 600);
+      return;
+    }
+  }
+
+  const igDirect = extractDatosIgualesDireccion(text);
+  if (igDirect) {
+    const f = findField(/factura/i, /igual.*direc/i) || findField(null, /igual.*direc/i);
+    if (f) {
+      state.pending.set(f.id, { valor: igDirect, label: "Los datos son iguales a la dirección" });
+      renderPending();
+      speak("Listo.");
+      setStatus(`Datos iguales a dirección: ${igDirect}.`);
+      await apply();
+      setTimeout(async () => { await scan(); }, 600);
       return;
     }
   }
@@ -1384,7 +1393,7 @@ async function processText(rawText) {
   }
 
   // COMANDOS DE CORRECCIÓN / RECTIFICACIÓN / EDICIÓN DE CAMPOS
-  const CORR_VERBS = "(?:cambia|cambiar|corrige|corregir|modifica|modificar|edita|editar|rectifica|rectificar|selecciona|seleccionar|marca|marcar|pon|poner)";
+  const CORR_VERBS = "(?:aedita|aeditar|ah\\s+edita|ha\\s+edita|cambia|cambiar|corrige|corregir|modifica|modificar|edita|editar|rectifica|rectificar|selecciona|seleccionar|marca|marcar|pon|poner)";
   const FIELD_TYPES = [
     "primer\\s+nombre", "segundo\\s+nombre", "nombres?",
     "primer\\s+apellido", "apellido\\s+paterno", "paterno",
@@ -1393,8 +1402,15 @@ async function processText(rawText) {
     "mostrar\\s+pacientes\\s+registrados", "pacientes\\s+registrados",
     "celular", "tel[eé]fono(?:\\s+de\\s+casa|\\s+casa|\\s+fijo)?", "casa", "fijo",
     "tel[eé]fono(?:\\s+de\\s+oficina|\\s+oficina|\\s+trabajo)?", "oficina", "trabajo",
-    "calle\\s+de\\s+factura", "direcci[oó]n\\s+de\\s+factura",
-    "correo\\s+de\\s+factura", "email\\s+de\\s+factura",
+    "calle\\s+(?:de|en|dentro\\s+de)\\s+factura", "direcci[oó]n\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "correo\\s+(?:de|en|dentro\\s+de)\\s+factura", "email\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "pa[ií]s\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "departamento\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "provincia\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "distrito\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "n[uú]mero\\s+exterior\\s+(?:de|en|dentro\\s+de)\\s+factura", "no\\.?\\s*exterior\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "documento\\s+(?:de|en|dentro\\s+de)\\s+factura", "ruc\\s+(?:de|en|dentro\\s+de)\\s+factura",
+    "tipo(?:\\s+de)?\\s+identificaci[oó]n\\s+(?:de|en|dentro\\s+de)\\s+factura",
     "raz[oó]n\\s+social",
     "los\\s+datos\\s+(?:si\\s+)?son\\s+iguales(?:\\s+a\\s+la\\s+direcci[oó]n)?",
     "datos\\s+iguales(?:\\s+a\\s+la\\s+direcci[oó]n)?",
@@ -1414,11 +1430,74 @@ async function processText(rawText) {
     const fieldType = corrMatch[1].toLowerCase();
     let rawVal = corrMatch[2].trim();
 
+    // Si la orden termina con especificación de factura (ej: "aedita tipo de identificación RUC dentro de factura")
+    const isEndFactura = /\s+(?:dentro\s+de\s+factura|en\s+factura|de\s+factura)\s*$/i.test(rawVal);
+    if (isEndFactura) {
+      rawVal = rawVal.replace(/\s+(?:dentro\s+de\s+factura|en\s+factura|de\s+factura)\s*$/i, "").trim();
+    }
+
     // 1. Quitar preposiciones y conectores iniciales como "a", "por", "es", ":", "de" sin dañar nombres que inician con A (ej: Alexander, Antonio, Ana)
     let cleanVal = rawVal.replace(/^(?:[\s:]*(?:\ba\b|\bpor\b|\bes\b|\bde\b)[\s:]*|[\s:]+)+/i, "").trim();
 
     // 2. Cortar si el dictado continúa con charla o conector de siguiente acción
     cleanVal = cleanVal.split(/\s+(?:y\s+luego|luego|despu[eé]s|y\s+despu[eé]s|para|con|rectifica|edita|cambia|corrige|confirmar|aplicar|descartar|cancelar|baja|sube)\b/i)[0].trim();
+
+    // FALLBACK ROBUSTO: Si el comando en corrMatch apuntaba a Factura
+    if (isEndFactura || /factura/i.test(fieldType)) {
+      let targetFacturaField = null;
+      let labelName = "Factura";
+      if (/tipo.*ident/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /tipo.*ident/i);
+        const tipoObj = typeof extractTipoIdentificacion === "function" ? extractTipoIdentificacion(cleanVal) : null;
+        cleanVal = tipoObj ? tipoObj.val : cleanVal.toUpperCase();
+        labelName = "Tipo identificación (Factura)";
+      } else if (/documento|ruc|dni/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /documento|ruc|dni/i);
+        cleanVal = cleanVal.replace(/\D/g, "") || cleanVal;
+        labelName = "Documento (Factura)";
+      } else if (/calle|direcci[oó]n/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /^calle$|calle(?!.*ext)|direcci[oó]n(?!.*ext)/i);
+        labelName = "Calle (Factura)";
+      } else if (/exterior|vivienda|n[uú]mero/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /exterior|no\.\s*exterior|num_ext|numext/i);
+        cleanVal = cleanVal.replace(/\b(?:de\s+factura|en\s+factura|dentro\s+de\s+factura|factura)\b/gi, "").trim();
+        cleanVal = /^(?:sin\s+n[uú]mero|sin\s+numero|sn|s\/n)$/i.test(cleanVal) ? "S/N" : cleanVal.toUpperCase();
+        labelName = "No. Exterior (Factura)";
+      } else if (/pa[ií]s/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /pa[ií]s/i);
+        cleanVal = cleanVal.toUpperCase();
+        labelName = "País (Factura)";
+      } else if (/departamento/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /departamento/i);
+        cleanVal = cleanVal.toUpperCase();
+        labelName = "Departamento (Factura)";
+      } else if (/provincia/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /provincia/i);
+        cleanVal = cleanVal.toUpperCase();
+        labelName = "Provincia (Factura)";
+      } else if (/distrito/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /distrito/i);
+        cleanVal = cleanVal.toUpperCase();
+        labelName = "Distrito (Factura)";
+      } else if (/correo|email/i.test(fieldType)) {
+        targetFacturaField = findField(/factura/i, /correo|email/i);
+        cleanVal = (typeof extractEmail === "function" ? extractEmail(cleanVal) : null) || cleanVal.replace(/\s+/g, "").toLowerCase();
+        labelName = "Correo (Factura)";
+      }
+
+      if (targetFacturaField && cleanVal) {
+        state.pending.set(targetFacturaField.id, { valor: cleanVal, label: labelName });
+        state.lockedFields.add(targetFacturaField.id);
+        const igField = findField(/factura/i, /igual.*direc/i);
+        if (igField) {
+          state.pending.set(igField.id, { valor: "No", label: "Los datos son iguales a la dirección" });
+        }
+        renderPending();
+        speak("Listo.");
+        setStatus(`${labelName}: "${cleanVal}". Di "confirmar".`);
+        return;
+      }
+    }
 
     // RAMA A1: PRIMER NOMBRE ESPECÍFICO (ej: "cambia el primer nombre a Juan")
     if (/^primer\s+nombre$/i.test(fieldType)) {

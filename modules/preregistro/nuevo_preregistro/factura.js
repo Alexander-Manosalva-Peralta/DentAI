@@ -4,29 +4,44 @@
    - ¿Los datos son iguales a la dirección? ("Si" / "No")
    - Aislamiento estricto de campos de facturación respecto a los datos del paciente */
 
+const normFacturaText = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
 // Extraer Requerimiento de Factura ("Si" / "No")
 function extractFactura(text) {
   if (!text) return null;
-  const normT = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normT = normFacturaText(text);
 
-  if (/\bsin\s+factura\b/i.test(normT) || /\bno\s+(?:va\s+a\s+requerir\s+)?factura\b/i.test(normT)) {
+  // Si el texto es una orden para editar un campo específico dentro de factura, NO es un toggle de factura
+  if (/(?:calle|direcci|exterior|vivienda|numero|num|pais|depa|provincia|distrito|correo|email|ruc|dni|identificaci|documento|razon\s+social)/i.test(normT)) {
+    return null;
+  }
+
+  // CASO NO: "sin factura", "no va a requerir/querer factura", "no quiere/requiere factura", "factura no"
+  if (/\b(?:sin\s+factura|no\s+(?:va\s+a\s+)?(?:requerir|querer|desear)\s+factura|no\s+(?:quiere|requiere|desea)\s+factura)\b/i.test(normT) ||
+      /(?:factura|(?:re)?querer\s+factura|(?:re)?querir\s+factura)\s*(?:a|es)?\s*no\b/i.test(normT) ||
+      /^(?:no\s+factura|factura\s+no|quitar\s+factura|desactivar\s+factura)$/i.test(normT)) {
     return "No";
   }
-  if (/(?:factura|requerir\s+factura)\s*(?:a|es)?\s*no\b/i.test(normT)) {
-    return "No";
-  }
-  if (/(?:con\s+factura|(?:va\s+a\s+)?requerir\s+factura|factura)\s*(?:a|es)?\s*s[ií]\b/i.test(normT) ||
-      /\bs[ií]\s+(?:va\s+a\s+requerir\s+)?factura\b/i.test(normT) ||
-      /\bcon\s+factura\b/i.test(normT)) {
+
+  // CASO SÍ: "con factura", "si va a requerir/querer factura", "va a querer/requerir factura", "quiere/requiere factura", "factura si"
+  if (/\b(?:con\s+factura|s[ií]\s+(?:va\s+a\s+)?(?:requerir|querer|desear)\s+factura|(?:va\s+a\s+)?(?:requerir|querer|desear)\s+factura|(?:quiere|requiere|desea)\s+factura)\b/i.test(normT) ||
+      /(?:factura|(?:re)?querer\s+factura|(?:re)?querir\s+factura)\s*(?:a|es)?\s*s[ií]\b/i.test(normT) ||
+      /^(?:s[ií]\s+factura|factura\s+s[ií]|activar\s+factura|poner\s+factura)$/i.test(normT)) {
     return "Si";
   }
+
   return null;
 }
 
 // Extraer "Los datos son iguales a la dirección" ("Si" / "No")
 function extractDatosIgualesDireccion(text) {
   if (!text) return null;
-  const normT = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normT = normFacturaText(text);
+
+  // Si es orden de editar un campo de factura, NO es toggle de datos iguales
+  if (/(?:calle|exterior|vivienda|numero|num|pais|depa|provincia|distrito|correo|email|ruc|dni|identificaci|documento|razon\s+social)/i.test(normT)) {
+    return null;
+  }
 
   const isAboutDatosIguales = /(?:datos\s+(?:si\s+)?son\s+iguales|mismos\s+datos\s+(?:que\s+|de\s+)?(?:la\s+)?direcci[oó]n|datos\s+iguales(?:\s+a\s+la\s+direcci[oó]n)?|iguales\s+a\s+la\s+direcci[oó]n)/i.test(normT);
   if (!isAboutDatosIguales) return null;
@@ -81,67 +96,69 @@ function formatFacturaResult(type, val) {
 function extractFacturaFieldCommand(text) {
   if (!text) return null;
   const raw = text.trim();
-  const normT = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normT = normFacturaText(raw);
 
-  // Si es toggle de checkbox (factura si/no, datos iguales si/no), delegar a extractFactura / extractDatosIguales
-  if (/\b(?:va\s+a\s+requerir\s+factura|con\s+factura|sin\s+factura)\b/i.test(normT) ||
-      /\b(?:datos\s+(?:si\s+)?son\s+iguales|mismos\s+datos|datos\s+iguales)\b/i.test(normT)) {
-    return null;
-  }
-  if (/^(?:factura\s+(?:si|no)|no\s+factura|factura)$/i.test(normT)) {
-    return null;
-  }
-
-  const FIELD_PATTERNS = [
-    { type: "calle", regex: /^(?:la\s+)?(?:calle|direcci[oó]n|avenida|jir[oó]n|pasaje)\b/i },
-    { type: "exterior", regex: /^(?:el\s+)?(?:n[uú]mero\s+exterior|no\.?\s*exterior|num\.?\s*ext|n[uú]mero\s+de\s+vivienda|n[uú]mero\s+de\s+casa|n[uú]mero|exterior|vivienda)\b/i },
-    { type: "pais", regex: /^(?:el\s+)?pa[ií]s\b/i },
-    { type: "departamento", regex: /^(?:el\s+)?(?:departamento|depa)\b/i },
-    { type: "provincia", regex: /^(?:la\s+)?provincia\b/i },
-    { type: "distrito", regex: /^(?:el\s+)?distrito\b/i },
-    { type: "correo", regex: /^(?:el\s+)?(?:correo(?:\s+electr[oó]nico)?|email)\b/i },
-    { type: "documento", regex: /^(?:el\s+)?(?:documento|ruc|dni)\b/i },
-    { type: "tipo_documento", regex: /^(?:el\s+)?(?:tipo(?:\s+de)?\s+identificaci[oó]n|tipo(?:\s+de)?\s+documento)\b/i },
-    { type: "razon_social", regex: /^(?:la\s+)?raz[oó]n\s+social\b/i }
+  const FIELD_DEFS = [
+    { type: 'tipo_documento', regex: /^(?:el\s+)?(?:tipo(?:\s+de)?\s+identificacion|tipo(?:\s+de)?\s+documento)\b/i },
+    { type: 'documento', regex: /^(?:el\s+)?(?:documento|ruc|dni)\b/i },
+    { type: 'calle', regex: /^(?:la\s+)?(?:calle|direccion|avenida|jiron|pasaje)\b/i },
+    { type: 'exterior', regex: /^(?:el\s+)?(?:numero\s+exterior|no\.?\s*exterior|num\.?\s*ext|numero\s+de\s+vivienda|numero\s+de\s+casa|numero|exterior|vivienda)\b/i },
+    { type: 'pais', regex: /^(?:el\s+)?pais\b/i },
+    { type: 'departamento', regex: /^(?:el\s+)?(?:departamento|depa)\b/i },
+    { type: 'provincia', regex: /^(?:la\s+)?provincia\b/i },
+    { type: 'distrito', regex: /^(?:el\s+)?distrito\b/i },
+    { type: 'correo', regex: /^(?:el\s+)?(?:correo(?:\s+electronico)?|email)\b/i },
+    { type: 'razon_social', regex: /^(?:la\s+)?razon\s+social\b/i }
   ];
 
-  const VERBS = "(?:edita|editar|cambia|cambiar|corrige|corregir|modifica|modificar|pon|poner|rectifica|rectificar)";
+  const VERBS = "(?:aedita|aeditar|edita|editar|cambia|cambiar|corrige|corregir|modifica|modificar|pon|poner|rectifica|rectificar)";
 
-  // Caso 1: Razón Social (directo o con prefijo)
-  const rsMatch = raw.match(new RegExp(`^(?:${VERBS}\\s+)?(?:(?:dentro\\s+de\\s+|en\\s+|de\\s+|datos\\s+de\\s+)factura\\s+)?(?:la\\s+)?raz[oó]n\\s+social\\s*[:=]?\\s*(.+)`, "i"));
-  if (rsMatch) {
-    let val = cleanFacturaValue(rsMatch[1]);
-    if (val) return { type: "razon_social", field: "Razón Social", value: val.toUpperCase() };
+  // 1. Razón Social (directo o con prefijo)
+  const rs = raw.match(new RegExp(`^(?:${VERBS}\\s+)?(?:(?:dentro\\s+de\\s+|en\\s+|de\\s+|datos\\s+de\\s+)factura\\s+)?(?:la\\s+)?raz[oó]n\\s+social\\s*[:=]?\\s*(.+)`, 'i'));
+  if (rs) {
+    const val = cleanFacturaValue(rs[1]);
+    if (val) return formatFacturaResult('razon_social', val);
   }
 
-  // Caso 2: Prefijos de Factura ("dentro de factura...", "en factura...", "datos de factura...", "edita dentro de factura...", etc.)
-  const prefixRegex = new RegExp(`^(?:(?:${VERBS}\\s+)?(?:dentro\\s+de\\s+|en\\s+|datos\\s+de\\s+)factura|(?:${VERBS}\\s+)?factura)\\s+(?:${VERBS}\\s+)?(.+)`, "i");
-  const pMatch = raw.match(prefixRegex);
-  if (pMatch) {
-    const remainder = pMatch[1].trim();
-    for (const f of FIELD_PATTERNS) {
-      const fMatch = remainder.match(f.regex);
-      if (fMatch) {
-        let val = remainder.slice(fMatch[0].length).trim();
-        val = cleanFacturaValue(val);
+  // 2. Factura al FINAL (ej: 'aedita tipo de identificación RUC dentro de factura', 'edita calle Honorio Delgado en factura', 'edita número exterior 552 de factura')
+  const endFactura = raw.match(new RegExp(`^(?:${VERBS}\\s+)?(.+?)\\s+(?:dentro\\s+de\\s+factura|en\\s+factura|de\\s+factura)\\s*$`, 'i'));
+  if (endFactura) {
+    const fieldAndVal = endFactura[1].trim();
+    const fieldAndValNorm = normFacturaText(fieldAndVal);
+    for (const f of FIELD_DEFS) {
+      const m = fieldAndValNorm.match(f.regex);
+      if (m) {
+        const val = cleanFacturaValue(fieldAndVal.slice(m[0].length));
         if (val) return formatFacturaResult(f.type, val);
       }
     }
   }
 
-  // Caso 3: Suffix / Infix de Factura ("edita calle de factura...", "edita calle en factura...", "cambia país de factura...", "calle de factura...")
-  const suffixRegex = new RegExp(`^(?:${VERBS}\\s+)?(?:el\s+|la\s+)?([a-z0-9\\s]+?)\\s+(?:de\\s+factura|en\\s+factura|dentro\\s+de\\s+factura|para\s+factura)\\s*[:=]?\\s*(.+)`, "i");
-  const sMatch = raw.match(suffixRegex);
-  if (sMatch) {
-    const fieldCandidate = sMatch[1].trim();
-    const valCandidate = cleanFacturaValue(sMatch[2]);
-    for (const f of FIELD_PATTERNS) {
-      if (f.regex.test(fieldCandidate)) {
-        if (valCandidate) return formatFacturaResult(f.type, valCandidate);
+  // 3. Factura al INICIO (ej: 'dentro de factura edita tipo de identificación RUC', 'en factura cambia país Perú', 'datos de factura calle...')
+  const startFactura = raw.match(new RegExp(`^(?:(?:${VERBS}\\s+)?(?:dentro\\s+de\\s+|en\\s+|datos\\s+de\\s+)factura|(?:${VERBS}\\s+)?factura)\\s+(?:${VERBS}\\s+)?(.+)`, 'i'));
+  if (startFactura) {
+    const remainder = startFactura[1].trim();
+    const remNorm = normFacturaText(remainder);
+    for (const f of FIELD_DEFS) {
+      const m = remNorm.match(f.regex);
+      if (m) {
+        const val = cleanFacturaValue(remainder.slice(m[0].length));
+        if (val) return formatFacturaResult(f.type, val);
+      }
+    }
+  }
+
+  // 4. Factura al MEDIO (ej: 'edita calle de factura Girón Honorio Delgado', 'edita número exterior de factura 552', 'edita país en factura Perú')
+  const midFactura = raw.match(new RegExp(`^(?:${VERBS}\\s+)?(.+?)\\s+(?:de\\s+factura|en\\s+factura|dentro\\s+de\\s+factura|para\\s+factura)\\s*[:=]?\\s*(.+)`, 'i'));
+  if (midFactura) {
+    const fieldCandidateNorm = normFacturaText(midFactura[1]);
+    const val = cleanFacturaValue(midFactura[2]);
+    for (const f of FIELD_DEFS) {
+      if (f.regex.test(fieldCandidateNorm)) {
+        if (val) return formatFacturaResult(f.type, val);
       }
     }
   }
 
   return null;
 }
-
