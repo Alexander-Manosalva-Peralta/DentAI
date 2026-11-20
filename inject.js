@@ -591,10 +591,10 @@ function dentaiFill(items) {
 
         // Si es Género
         if (!opt && (/masculino|hombre/i.test(v))) {
-          opt = Array.from(el.options).find((o) => /masculino/i.test(o.text) || o.value === "M");
+          opt = Array.from(el.options).find((o) => /masculino/i.test(o.text) || /^m(asculino)?$/i.test(o.value) || o.value === "1" || o.value === "H");
         }
         if (!opt && (/femenino|mujer/i.test(v))) {
-          opt = Array.from(el.options).find((o) => /femenino/i.test(o.text) || o.value === "F");
+          opt = Array.from(el.options).find((o) => /femenino/i.test(o.text) || /^f(emenino)?$/i.test(o.value) || o.value === "2");
         }
 
         if (!opt && it.contexto !== "anamnesis") {

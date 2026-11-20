@@ -605,9 +605,9 @@ async function buscarPaciente(dni, s) {
         if (genRaw.startsWith("M") || genRaw === "1" || genRaw === "H" || genRaw === "MASCULINO") genero = "MASCULINO";
         else if (genRaw.startsWith("F") || genRaw === "2" || genRaw === "FEMENINO") genero = "FEMENINO";
 
-        let nom = (data.nombres || data.nombre || data.first_name || data.firstName || data.prenombres || "").trim();
-        let apePat = (data.apellidoPaterno || data.apellido_paterno || data.primer_apellido || data.primerApellido || data.first_surname || data.firstSurname || data.paterno || data.apellido1 || "").trim();
-        let apeMat = (data.apellidoMaterno || data.apellido_materno || data.segundo_apellido || data.segundoApellido || data.second_surname || data.secondSurname || data.materno || data.apellido2 || "").trim();
+        let nom = (data.first_name || data.nombres || data.nombre || data.firstName || data.prenombres || "").trim();
+        let apePat = (data.first_last_name || data.apellidoPaterno || data.apellido_paterno || data.primer_apellido || data.primerApellido || data.first_surname || data.firstSurname || data.paterno || data.apellido1 || "").trim();
+        let apeMat = (data.second_last_name || data.apellidoMaterno || data.apellido_materno || data.segundo_apellido || data.segundoApellido || data.second_surname || data.secondSurname || data.materno || data.apellido2 || "").trim();
 
         // Si los apellidos vienen juntos en un campo único
         const apellidosJuntos = (data.apellidos || data.last_name || data.apellidosCompletos || "").trim();
@@ -622,18 +622,17 @@ async function buscarPaciente(dni, s) {
         }
 
         // Desglose de nombre completo si los apellidos no vinieron en campos separados
-        const full = (data.nombreCompleto || data.nombre_completo || data.full_name || data.name || "").trim();
+        // En Perú (RENIEC), el formato oficial siempre es: [APELLIDO_PAT] [APELLIDO_MAT] [NOMBRES]
+        const full = (data.full_name || data.nombreCompleto || data.nombre_completo || "").trim();
         if ((!apePat || !apeMat) && full) {
           const parts = full.split(/\s+/).filter(Boolean);
           if (parts.length >= 3) {
-            if (!nom) {
-              apePat = parts[0];
-              apeMat = parts[1];
-              nom = parts.slice(2).join(" ");
-            } else {
-              apeMat = parts[parts.length - 1];
-              apePat = parts[parts.length - 2];
-            }
+            if (!apePat) apePat = parts[0];
+            if (!apeMat) apeMat = parts[1];
+            if (!nom) nom = parts.slice(2).join(" ");
+          } else if (parts.length === 2) {
+            if (!apePat) apePat = parts[0];
+            if (!apeMat) apeMat = parts[1];
           }
         }
 
@@ -677,18 +676,18 @@ function poblarCamposPaciente(patient) {
 
   // Nombres y Apellidos (No sobreescribir si fueron rectificados manualmente por voz)
   const nomField = findField(/identificacion/i, /^nombre$/i) || findField(null, /^nombre$/i);
-  const patField = findField(/identificacion/i, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*surname/i) || findField(null, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*surname/i);
-  const matField = findField(/identificacion/i, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*surname/i) || findField(null, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*surname/i);
+  const patField = findField(/identificacion/i, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*last.*name|first.*surname/i) || findField(null, /primer\s*apellido|paterno|ape.*pat|apellido1|first.*last.*name|first.*surname/i);
+  const matField = findField(/identificacion/i, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*last.*name|second.*surname/i) || findField(null, /segundo\s*apellido|materno|ape.*mat|apellido2|second.*last.*name|second.*surname/i);
   if (nomField && patient.nombres && !state.lockedFields.has(nomField.id)) {
-    state.pending.set(nomField.id, { valor: patient.nombres, label: "Nombre" });
+    state.pending.set(nomField.id, { valor: patient.nombres, label: "Nombre", field: nomField });
     addedLabels.push("Nombre");
   }
   if (patField && patient.apellidoPaterno && !state.lockedFields.has(patField.id)) {
-    state.pending.set(patField.id, { valor: patient.apellidoPaterno, label: "Primer Apellido" });
+    state.pending.set(patField.id, { valor: patient.apellidoPaterno, label: "Primer Apellido", field: patField });
     addedLabels.push("Primer Apellido");
   }
   if (matField && patient.apellidoMaterno && !state.lockedFields.has(matField.id)) {
-    state.pending.set(matField.id, { valor: patient.apellidoMaterno, label: "Segundo Apellido" });
+    state.pending.set(matField.id, { valor: patient.apellidoMaterno, label: "Segundo Apellido", field: matField });
     addedLabels.push("Segundo Apellido");
   }
 
@@ -696,7 +695,7 @@ function poblarCamposPaciente(patient) {
   if (patient.genero) {
     const genField = findField(/identificacion/i, /genero|sexo/i) || findField(null, /genero|sexo/i);
     if (genField && !state.lockedFields.has(genField.id)) {
-      state.pending.set(genField.id, { valor: patient.genero, label: "Género" });
+      state.pending.set(genField.id, { valor: patient.genero, label: "Género", field: genField });
       addedLabels.push("Género");
     }
   }
@@ -705,7 +704,7 @@ function poblarCamposPaciente(patient) {
   if (patient.fechaNacimiento) {
     const nacField = findField(/identificacion/i, /nacimiento|fecha.*nac/i) || findField(null, /nacimiento|fecha.*nac/i);
     if (nacField && !state.lockedFields.has(nacField.id)) {
-      state.pending.set(nacField.id, { valor: patient.fechaNacimiento, label: "Fecha Nacimiento" });
+      state.pending.set(nacField.id, { valor: patient.fechaNacimiento, label: "Fecha Nacimiento", field: nacField });
       addedLabels.push("Fecha Nacimiento");
     }
   }
@@ -714,11 +713,11 @@ function poblarCamposPaciente(patient) {
   const tipoField = findField(/identificacion/i, /tipo.*ident/i) || findField(null, /tipo.*ident/i);
   const docField = findField(/identificacion/i, /^documento$|dni/i) || findField(null, /^documento$|dni/i);
   if (tipoField && !state.lockedFields.has(tipoField.id)) {
-    state.pending.set(tipoField.id, { valor: patient.tipoIdentificacion || "DNI", label: "Tipo identificación" });
+    state.pending.set(tipoField.id, { valor: patient.tipoIdentificacion || "DNI", label: "Tipo identificación", field: tipoField });
     addedLabels.push("Tipo ID");
   }
   if (docField && !state.lockedFields.has(docField.id)) {
-    state.pending.set(docField.id, { valor: patient.dni, label: "Documento" });
+    state.pending.set(docField.id, { valor: patient.dni, label: "Documento", field: docField });
     addedLabels.push("DNI");
   }
 
