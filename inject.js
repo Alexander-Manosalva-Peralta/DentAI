@@ -767,7 +767,11 @@ function dentaiNavigate(target) {
     inicio: "/usmile/index.php/admin",
     home: "/usmile/index.php/admin",
     preregistro: "/usmile/index.php/admision/preregistro_control",
+    prerregistro: "/usmile/index.php/admision/preregistro_control",
     "pre registro": "/usmile/index.php/admision/preregistro_control",
+    "pre rregistro": "/usmile/index.php/admision/preregistro_control",
+    "nuevo preregistro": "/usmile/index.php/admision/preregistro_control",
+    "nuevo prerregistro": "/usmile/index.php/admision/preregistro_control",
     servicio: "/usmile/index.php/panel/inicio",
     agenda: "/usmile/index.php/agenda/index/admin",
     citas: "/usmile/index.php/agenda/index/admin",
@@ -914,6 +918,7 @@ function dentaiNavigate(target) {
 
   // Normalizar variaciones fonéticas comunes de Google Web Speech para menús de Smile:
   let cleanTarget = targetClean
+    .replace(/\bpre\s*r+egistro\b/gi, "preregistro")
     .replace(/\bde\s+talle\b/gi, "detalle")
     .replace(/\boperacione\b/gi, "operaciones");
 
@@ -954,9 +959,9 @@ function dentaiNavigate(target) {
     if (!visible(el) && !isMenuElement) continue;
 
     const rawText = (el.innerText || el.textContent || "").trim();
-    const cleanText = norm(rawText);
-    const titleText = norm(el.getAttribute("title") || "");
-    const ariaText = norm(el.getAttribute("aria-label") || "");
+    const cleanText = norm(rawText).replace(/\bpre\s*r+egistro\b/gi, "preregistro");
+    const titleText = norm(el.getAttribute("title") || "").replace(/\bpre\s*r+egistro\b/gi, "preregistro");
+    const ariaText = norm(el.getAttribute("aria-label") || "").replace(/\bpre\s*r+egistro\b/gi, "preregistro");
     const idText = norm(el.id || "");
 
     const candidates = [

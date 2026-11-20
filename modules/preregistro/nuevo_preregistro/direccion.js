@@ -8,7 +8,7 @@
 // Extraer Calle / Dirección (Dirección general del paciente)
 function extractCalle(text) {
   if (!text) return null;
-  if (/\b(?:de\s+factura|en\s+factura|para\s+factura)\b/i.test(text)) return null;
+  if (/\b(?:de\s+factura|en\s+factura|para\s+factura|dentro\s+de\s+factura|datos\s+de\s+factura|factura)\b/i.test(text)) return null;
 
   // GUARDIA ESTRICTA: Si es número exterior, vivienda o casa, NUNCA es calle
   if (/(?:n[uú]mero\s+(?:exterior|de\s+vivienda|de\s+casa|de\s+direcci[oó]n|vivienda|casa)|no\.?\s*exterior|num\.?\s*ext|vivienda|sin\s+n[uú]mero|sin\s+numero|\bsn\b)/i.test(text)) {
@@ -29,6 +29,7 @@ function extractCalle(text) {
 function extractNumeroExterior(text) {
   if (!text) return null;
   const normT = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (/\b(?:de\s+factura|en\s+factura|para\s+factura|dentro\s+de\s+factura|datos\s+de\s+factura|factura)\b/i.test(normT)) return null;
 
   // Si el texto habla explícitamente de DNI o celular o fecha sin mencionar exterior/vivienda/casa, ignorar
   if (/(?:fecha|nacimiento|celular|telefono|dni|documento)/i.test(normT) && 
@@ -58,6 +59,7 @@ function extractNumeroExterior(text) {
 // Extraer Referencia
 function extractReferencia(text) {
   if (!text) return null;
+  if (/\b(?:de\s+factura|en\s+factura|para\s+factura|dentro\s+de\s+factura|datos\s+de\s+factura|factura)\b/i.test(text)) return null;
   const m = text.match(/(?:como\s+referencia|referencia|de\s+referencia)\s*(?:\bes\b|:|\bde\b|\ba\b)?\s*(.+)/i);
   if (m) {
     let val = m[1].trim().replace(/^(?:[\s:]*(?:\ba\b|\bpor\b|\bes\b|\bde\b)[\s:]*|[\s:]+)+/i, "").trim();

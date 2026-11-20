@@ -1072,7 +1072,7 @@ async function processText(rawText) {
   // 2. COMANDOS DE SCROLL RÁPIDO (Manos Libres) - Ultra sensible y ejecución inmediata
   // Reconoce con alta sensibilidad: "sube", "subir", "suba", "suve", "tube", "tuve", "arriba", "más arriba", "sube un poco"
   // y "baja", "bajar", "baje", "abajo", "más abajo", "baja un poco"
-  const isNavigatingToTarget = /(?:a|hacia|en)\s+(?:datos|identificaci|contacto|direcci|factura|otro|inicio|agenda|servicio|preregistro|guardar|limpiar)/i.test(normRaw);
+  const isNavigatingToTarget = /(?:a|hacia|en)\s+(?:datos|identificaci|contacto|direcci|factura|otro|inicio|agenda|servicio|preregistro|prerregistro|guardar|limpiar)/i.test(normRaw);
 
   if (!isNavigatingToTarget) {
     const IS_SCROLL_UP = /\b(?:sube|subir|suba|suban|subi|subí|suve|suva|tube|tuve|arriba)\b/i;
@@ -1169,7 +1169,7 @@ async function processText(rawText) {
   }
 
   // B. Coincidencia directa por nombre de módulo o botón de Smile
-  const DIRECT_MODULES = /^(?:inicio|preregistro|pre registro|pre-registro|servicio|agenda|citas|reporte|reporte de fallas|nuevo|nuevo preregistro|nuevo registro|nuevos registro|nuevo paciente|crear preregistro|crear paciente|modificar|buscar|busca|patologia|patología|solicitudes|mantenimiento|operaciones de mantenimiento|detalle de equipos|detalle equipos|reportes de mantenimiento|reportes|entrega de materiales|materiales|requisiciones|preclinicas|preclínicas|laboratorio|laboratorios|salidas|salidas al alumno|ajustes inventario subalmacen|informes|consultas|expediente|prestamo|prestamos|préstamo|préstamos|instrumental universal|instrumental alumno|radiologia|radiología|por paciente|cirugia|cirugias|cirugía|cirugías|evaluaciones|esterilizacion|esterilización|caja|control|inventarios|admision|admisión|atencion al usuario|atención al usuario|documentos institucionales|dashboard)$/i;
+  const DIRECT_MODULES = /^(?:inicio|preregistro|prerregistro|pre registro|pre rregistro|pre-registro|servicio|agenda|citas|reporte|reporte de fallas|nuevo|nuevo preregistro|nuevo prerregistro|nuevo registro|nuevos registro|nuevo paciente|crear preregistro|crear prerregistro|crear paciente|modificar|buscar|busca|patologia|patología|solicitudes|mantenimiento|operaciones de mantenimiento|detalle de equipos|detalle equipos|reportes de mantenimiento|reportes|entrega de materiales|materiales|requisiciones|preclinicas|preclínicas|laboratorio|laboratorios|salidas|salidas al alumno|ajustes inventario subalmacen|informes|consultas|expediente|prestamo|prestamos|préstamo|préstamos|instrumental universal|instrumental alumno|radiologia|radiología|por paciente|cirugia|cirugias|cirugía|cirugías|evaluaciones|esterilizacion|esterilización|caja|control|inventarios|admision|admisión|atencion al usuario|atención al usuario|documentos institucionales|dashboard)$/i;
   if (DIRECT_MODULES.test(normRaw)) {
     const ok = await navigateToTab(normRaw);
     if (ok) return;
@@ -1244,6 +1244,56 @@ async function processText(rawText) {
       setStatus(`Datos iguales a dirección: ${igDirect}.`);
       await apply();
       setTimeout(async () => { await scan(); }, 600);
+      return;
+    }
+  }
+
+  // COMANDOS DIRIGIDOS ESPECÍFICAMENTE A LA SECCIÓN FACTURA
+  // Desambigua campos duplicados: Calle, No. Exterior, País, Departamento, Provincia, Distrito, Correo, Documento
+  // ante dictados como: "edita calle de factura", "dentro de factura edita calle", "en factura edita país",
+  // "datos de factura calle", "cambia datos de factura calle", "edita razón social", etc.
+  const facFieldCmd = typeof extractFacturaFieldCommand === "function" ? extractFacturaFieldCommand(text) : null;
+  if (facFieldCmd) {
+    let f = null;
+    switch (facFieldCmd.type) {
+      case "calle":
+        f = findField(/factura/i, /^calle$|calle(?!.*ext)|direcci[oó]n(?!.*ext)/i);
+        break;
+      case "exterior":
+        f = findField(/factura/i, /exterior|no\.\s*exterior|num_ext|numext/i);
+        break;
+      case "pais":
+        f = findField(/factura/i, /pa[ií]s/i);
+        break;
+      case "departamento":
+        f = findField(/factura/i, /departamento/i);
+        break;
+      case "provincia":
+        f = findField(/factura/i, /provincia/i);
+        break;
+      case "distrito":
+        f = findField(/factura/i, /distrito/i);
+        break;
+      case "correo":
+        f = findField(/factura/i, /correo|email/i);
+        break;
+      case "documento":
+        f = findField(/factura/i, /documento|ruc|dni/i);
+        break;
+      case "tipo_documento":
+        f = findField(/factura/i, /tipo.*ident/i);
+        break;
+      case "razon_social":
+        f = findField(/factura/i, /raz[oó]n\s+social/i);
+        break;
+    }
+
+    if (f) {
+      state.pending.set(f.id, { valor: facFieldCmd.value, label: facFieldCmd.field });
+      state.lockedFields.add(f.id);
+      renderPending();
+      speak("Listo.");
+      setStatus(`${facFieldCmd.field}: "${facFieldCmd.value}". Di "confirmar".`);
       return;
     }
   }
@@ -1351,7 +1401,7 @@ async function processText(rawText) {
     "factura", "va\\s+a\\s+requerir\\s+factura",
     "calle", "direcci[oó]n",
     "n[uú]mero\\s+exterior(?:\\s+de\\s+vivienda)?", "n[uú]mero\\s+de\\s+vivienda", "n[uú]mero\\s+de\\s+casa", "n[uú]mero\\s+de\\s+direcci[oó]n", "no\\.?\\s*exterior", "vivienda", "n[uú]mero",
-    "referencia", "distrito", "provincia", "departamento",
+    "referencia", "distrito", "provincia", "departamento", "pa[ií]s",
     "fecha", "nacimiento", "g[eé]nero", "sexo",
     "tipo(?:\\s+de)?\\s+identificaci[oó]n", "documento", "dni",
     "c[oó]mo\\s+se\\s+enter[oó]", "como\\s+se\\s+entero", "recomendador", "medio",
@@ -1661,15 +1711,54 @@ async function processText(rawText) {
       }
     }
 
-    // RAMA H: DISTRITO
-    if (/distrito/i.test(fieldType)) {
+    // RAMA H: DISTRITO (Dirección General)
+    if (/^distrito$/i.test(fieldType)) {
       const f = findField(/direccion/i, /distrito/i);
       if (f && cleanVal) {
         state.pending.set(f.id, { valor: cleanVal.toUpperCase(), label: "Distrito" });
         state.lockedFields.add(f.id);
         renderPending();
         speak("Listo.");
-        setStatus(`Distrito corregido a "${cleanVal}". Di "confirmar".`);
+        setStatus(`Distrito corregido a "${cleanVal.toUpperCase()}". Di "confirmar".`);
+        return;
+      }
+    }
+
+    // RAMA H2: DEPARTAMENTO (Dirección General)
+    if (/^departamento$/i.test(fieldType)) {
+      const f = findField(/direccion/i, /departamento/i);
+      if (f && cleanVal) {
+        state.pending.set(f.id, { valor: cleanVal.toUpperCase(), label: "Departamento" });
+        state.lockedFields.add(f.id);
+        renderPending();
+        speak("Listo.");
+        setStatus(`Departamento corregido a "${cleanVal.toUpperCase()}". Di "confirmar".`);
+        return;
+      }
+    }
+
+    // RAMA H3: PROVINCIA (Dirección General)
+    if (/^provincia$/i.test(fieldType)) {
+      const f = findField(/direccion/i, /provincia/i);
+      if (f && cleanVal) {
+        state.pending.set(f.id, { valor: cleanVal.toUpperCase(), label: "Provincia" });
+        state.lockedFields.add(f.id);
+        renderPending();
+        speak("Listo.");
+        setStatus(`Provincia corregida a "${cleanVal.toUpperCase()}". Di "confirmar".`);
+        return;
+      }
+    }
+
+    // RAMA H4: PAÍS (Dirección General)
+    if (/^pa[ií]s$/i.test(fieldType)) {
+      const f = findField(/direccion/i, /pa[ií]s/i);
+      if (f && cleanVal) {
+        state.pending.set(f.id, { valor: cleanVal.toUpperCase(), label: "País" });
+        state.lockedFields.add(f.id);
+        renderPending();
+        speak("Listo.");
+        setStatus(`País corregido a "${cleanVal.toUpperCase()}". Di "confirmar".`);
         return;
       }
     }
@@ -1819,7 +1908,7 @@ async function processText(rawText) {
   // Si son murmullos cortos o monosílabos sin números ni datos clínicos, no llamar a Gemini para no quemar la cuota diaria
   const words = text.split(/\s+/).filter(Boolean);
   const hasNumbers = /\d/.test(text);
-  const hasClinicalWord = /(?:dni|documento|tipo|pasaporte|carnet|extranjer|ruc|nombre|apellido|fecha|nacimiento|celular|telefono|tel|correo|email|arroba|genero|sexo|masculino|femenino|calle|direccion|exterior|vivienda|casa|referencia|factura|razon|entero|recomendad|civil|soltero|casado|ocupacion|profesion|estudiante|escolaridad|citas|observacion|inicio|agenda|servicio|preregistro|reporte|sube|subir|baja|bajar|arriba|abajo|seccion)/i.test(normRaw);
+  const hasClinicalWord = /(?:dni|documento|tipo|pasaporte|carnet|extranjer|ruc|nombre|apellido|fecha|nacimiento|celular|telefono|tel|correo|email|arroba|genero|sexo|masculino|femenino|calle|direccion|exterior|vivienda|casa|referencia|factura|razon|entero|recomendad|civil|soltero|casado|ocupacion|profesion|estudiante|escolaridad|citas|observacion|inicio|agenda|servicio|preregistro|prerregistro|reporte|sube|subir|baja|bajar|arriba|abajo|seccion)/i.test(normRaw);
 
   if (words.length < 2 && !hasNumbers && !hasClinicalWord) {
     return;
