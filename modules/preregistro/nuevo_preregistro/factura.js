@@ -111,7 +111,7 @@ function extractFacturaFieldCommand(text) {
     { type: 'razon_social', regex: /^(?:la\s+)?razon\s+social\b/i }
   ];
 
-  const VERBS = "(?:aedita|aeditar|edita|editar|cambia|cambiar|corrige|corregir|modifica|modificar|pon|poner|rectifica|rectificar)";
+  const VERBS = "(?:aedita|aeditar|edita|editar|cambia|cambiar|corrige|corregir|modifica|modificar|selecciona|seleccionar|marca|marcar|pon|poner|rectifica|rectificar)";
 
   // 1. Razón Social (directo o con prefijo)
   const rs = raw.match(new RegExp(`^(?:${VERBS}\\s+)?(?:(?:dentro\\s+de\\s+|en\\s+|de\\s+|datos\\s+de\\s+)factura\\s+)?(?:la\\s+)?raz[oó]n\\s+social\\s*[:=]?\\s*(.+)`, 'i'));
@@ -161,4 +161,76 @@ function extractFacturaFieldCommand(text) {
   }
 
   return null;
+}
+
+// Extraer dictado compuesto o individual de Ubigeo (Departamento, Provincia, Distrito, País)
+// Permite dictar simultáneamente: "departamento Cajamarca provincia Cajamarca distrito Cajamarca"
+// o dentro de factura: "en factura departamento Cajamarca provincia Cajamarca distrito Cajamarca"
+function extractUbigeoCompound(text) {
+  if (!text) return null;
+  const raw = text.trim();
+  const normT = normFacturaText(raw);
+
+  const hasDep = /\b(?:departamento|depa)\b/i.test(normT);
+  const hasProv = /\bprovincia\b/i.test(normT);
+  const hasDist = /\bdistrito\b/i.test(normT);
+  const hasPais = /\bpa[ií]s\b/i.test(normT);
+
+  if (!hasDep && !hasProv && !hasDist && !hasPais) return null;
+
+  const isFactura = /\b(?:dentro\s+de\s+factura|en\s+factura|de\s+factura|datos\s+de\s+factura|factura)\b/i.test(normT);
+
+  // Quitar especificaciones de factura y verbos de acción
+  let cleanText = raw
+    .replace(/\b(?:dentro\s+de\s+factura|en\s+factura|de\s+factura|datos\s+de\s+factura|factura)\b/gi, ' ')
+    .replace(/\b(?:aedita|aeditar|edita|editar|cambia|cambiar|corrige|corregir|modifica|modificar|selecciona|seleccionar|marca|marcar|pon|poner|rectifica|rectificar)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  function cleanUbigeoVal(v) {
+    if (!v) return '';
+    let val = v.trim();
+    // Quitar preposiciones iniciales o palabras repetidas del tipo de campo
+    val = val.replace(/^(?:[\s:]*(?:\ba\b|\bpor\b|\bes\b|\bsea\b|\ben\b)[\s:]*|[\s:]+)+/i, '').trim();
+    val = val.replace(/^(?:departamento|depa|provincia|distrito|pa[ií]s)\s+/i, '').trim();
+    val = val.split(/\s+(?:confirmar|aplicar|descartar|cancelar|y\s+luego|luego)\b/i)[0].trim();
+    return val.toUpperCase();
+  }
+
+  const result = { isFactura, fields: [] };
+
+  const depMatch = cleanText.match(/\b(?:departamento|depa)\s*[:=]?\s*([a-záéíóúñ\s]+?)(?=\s+\b(?:provincia|distrito|pa[ií]s)\b|$)/i);
+  if (depMatch) {
+    const val = cleanUbigeoVal(depMatch[1]);
+    if (val) result.fields.push({ type: 'departamento', val });
+  }
+
+  const provMatch = cleanText.match(/\bprovincia\s*[:=]?\s*([a-záéíóúñ\s]+?)(?=\s+\b(?:departamento|depa|distrito|pa[ií]s)\b|$)/i);
+  if (provMatch) {
+    const val = cleanUbigeoVal(provMatch[1]);
+    if (val) result.fields.push({ type: 'provincia', val });
+  }
+
+  const distMatch = cleanText.match(/\bdistrito\s*[:=]?\s*([a-záéíóúñ\s]+?)(?=\s+\b(?:departamento|depa|provincia|pa[ií]s)\b|$)/i);
+  if (distMatch) {
+    const val = cleanUbigeoVal(distMatch[1]);
+    if (val) result.fields.push({ type: 'distrito', val });
+  }
+
+  const paisMatch = cleanText.match(/\bpa[ií]s\s*[:=]?\s*([a-záéíóúñ\s]+?)(?=\s+\b(?:departamento|depa|provincia|distrito)\b|$)/i);
+  if (paisMatch) {
+    const val = cleanUbigeoVal(paisMatch[1]);
+    if (val) result.fields.push({ type: 'pais', val });
+  }
+
+  return result.fields.length > 0 ? result : null;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    extractFactura,
+    extractDatosIgualesDireccion,
+    extractFacturaFieldCommand,
+    extractUbigeoCompound
+  };
 }

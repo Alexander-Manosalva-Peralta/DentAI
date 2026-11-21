@@ -199,3 +199,125 @@ test("Navegación: soporta 'prerregistro' con doble r y navega exitosamente", (t
   const navDirect = w.dentaiNavigate("nuevo prerregistro");
   assert.ok(navDirect.ok);
 });
+
+test("Ubigeo Compuesto: extrae departamento, provincia y distrito simultáneos", (t) => {
+  const { w, close } = setupEnv();
+  t.after(close);
+
+  // 1. Caso estándar Dirección General
+  const res1 = w.extractUbigeoCompound("departamento Cajamarca provincia Cajamarca distrito Cajamarca");
+  assert.ok(res1);
+  assert.equal(res1.isFactura, false);
+  assert.equal(res1.fields.length, 3);
+  assert.equal(res1.fields[0].type, "departamento");
+  assert.equal(res1.fields[0].val, "CAJAMARCA");
+  assert.equal(res1.fields[1].type, "provincia");
+  assert.equal(res1.fields[1].val, "CAJAMARCA");
+  assert.equal(res1.fields[2].type, "distrito");
+  assert.equal(res1.fields[2].val, "CAJAMARCA");
+
+  // 2. Caso en Factura
+  const res2 = w.extractUbigeoCompound("en factura departamento Cajamarca provincia Cajamarca distrito Cajamarca");
+  assert.ok(res2);
+  assert.equal(res2.isFactura, true);
+  assert.equal(res2.fields.length, 3);
+  assert.equal(res2.fields[0].type, "departamento");
+  assert.equal(res2.fields[0].val, "CAJAMARCA");
+  assert.equal(res2.fields[1].type, "provincia");
+  assert.equal(res2.fields[1].val, "CAJAMARCA");
+  assert.equal(res2.fields[2].type, "distrito");
+  assert.equal(res2.fields[2].val, "CAJAMARCA");
+
+  // 3. Caso dentro de factura con orden invertido y distrito compuesto "San Martín de Porres"
+  const res3 = w.extractUbigeoCompound("dentro de factura distrito San Martín de Porres provincia Lima departamento Lima");
+  assert.ok(res3);
+  assert.equal(res3.isFactura, true);
+  assert.equal(res3.fields.length, 3);
+  const dep = res3.fields.find(f => f.type === "departamento");
+  const prov = res3.fields.find(f => f.type === "provincia");
+  const dist = res3.fields.find(f => f.type === "distrito");
+  assert.equal(dep.val, "LIMA");
+  assert.equal(prov.val, "LIMA");
+  assert.equal(dist.val, "SAN MARTÍN DE PORRES");
+
+  // 4. Caso reporte de Yojan con verbo 'selecciona'
+  const res4 = w.extractUbigeoCompound("selecciona en departamento en factura departamento Cajamarca");
+  assert.ok(res4);
+  assert.equal(res4.isFactura, true);
+  assert.equal(res4.fields[0].type, "departamento");
+  assert.equal(res4.fields[0].val, "CAJAMARCA");
+
+  const res5 = w.extractUbigeoCompound("selecciona en factura provincia Cajamarca");
+  assert.ok(res5);
+  assert.equal(res5.isFactura, true);
+  assert.equal(res5.fields[0].type, "provincia");
+  assert.equal(res5.fields[0].val, "CAJAMARCA");
+
+  // 5. No intercepta texto no relacionado a Ubigeo
+  assert.equal(w.extractUbigeoCompound("edita calle Los Sauces 123"), null);
+});
+
+test("Ubigeo Cascada: aplicación por etapas da tiempo a que Smile pueble opciones dinámicas por AJAX", async (t) => {
+  const { w, close } = setupEnv();
+  t.after(close);
+
+  const doc = w.document;
+  doc.body.innerHTML = `
+    <select id="id_departamento" data-dentai-key="k_dep">
+      <option value="">::seleccione::</option>
+      <option value="06">CAJAMARCA</option>
+      <option value="15">LIMA</option>
+    </select>
+    <select id="id_provincia" data-dentai-key="k_prov">
+      <option value="">::seleccione::</option>
+    </select>
+    <select id="id_distrito" data-dentai-key="k_dist">
+      <option value="">::seleccione::</option>
+    </select>
+  `;
+
+  const depSelect = doc.getElementById("id_departamento");
+  const provSelect = doc.getElementById("id_provincia");
+  const distSelect = doc.getElementById("id_distrito");
+
+  depSelect.addEventListener("change", () => {
+    setTimeout(() => {
+      provSelect.innerHTML = `
+        <option value="">::seleccione::</option>
+        <option value="0601">CAJAMARCA</option>
+        <option value="0602">CAJABAMBA</option>
+      `;
+    }, 40);
+  });
+
+  provSelect.addEventListener("change", () => {
+    setTimeout(() => {
+      distSelect.innerHTML = `
+        <option value="">::seleccione::</option>
+        <option value="060101">CAJAMARCA</option>
+        <option value="060102">ASUNCION</option>
+      `;
+    }, 40);
+  });
+
+  // Etapa 1: Departamento
+  const resDep = w.dentaiFill([{ key: "k_dep", valor: "CAJAMARCA", etiqueta: "Departamento" }]);
+  assert.ok(resDep[0].ok);
+  assert.equal(depSelect.value, "06");
+
+  // Espera para AJAX de provincias (simula la espera en apply())
+  await new Promise((r) => setTimeout(r, 60));
+
+  // Etapa 2: Provincia
+  const resProv = w.dentaiFill([{ key: "k_prov", valor: "CAJAMARCA", etiqueta: "Provincia" }]);
+  assert.ok(resProv[0].ok);
+  assert.equal(provSelect.value, "0601");
+
+  // Espera para AJAX de distritos (simula la espera en apply())
+  await new Promise((r) => setTimeout(r, 60));
+
+  // Etapa 3: Distrito
+  const resDist = w.dentaiFill([{ key: "k_dist", valor: "CAJAMARCA", etiqueta: "Distrito" }]);
+  assert.ok(resDist[0].ok);
+  assert.equal(distSelect.value, "060101");
+});

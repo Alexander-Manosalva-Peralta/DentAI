@@ -1219,6 +1219,55 @@ async function processText(rawText) {
     return;
   }
 
+  // EXTRACTOR COMPUESTO O INDIVIDUAL DE UBIGEO (Departamento, Provincia, Distrito, País)
+  // Atiende dictados simultáneos ("departamento Cajamarca provincia Cajamarca distrito Cajamarca")
+  // tanto para Dirección general como dentro de Factura
+  const ubigeoResult = typeof extractUbigeoCompound === "function" ? extractUbigeoCompound(text) : null;
+  if (ubigeoResult && ubigeoResult.fields && ubigeoResult.fields.length > 0) {
+    const addedLabels = [];
+    const targetSec = ubigeoResult.isFactura ? /factura/i : /direcci[oó]n/i;
+
+    // Si es Factura, asegurar que "Los datos son iguales a la dirección" sea "No" para desbloquear campos
+    if (ubigeoResult.isFactura) {
+      const igField = findField(/factura/i, /igual.*direc/i);
+      if (igField) {
+        state.pending.set(igField.id, { valor: "No", label: "Los datos son iguales a la dirección — Factura", field: igField });
+        state.lockedFields.add(igField.id);
+      }
+    }
+
+    for (const item of ubigeoResult.fields) {
+      let f = null;
+      let lblName = "";
+      if (item.type === "departamento") {
+        f = findField(targetSec, /departamento|depa/i) || findField(null, /departamento|depa/i);
+        lblName = ubigeoResult.isFactura ? "Departamento (Factura)" : "Departamento";
+      } else if (item.type === "provincia") {
+        f = findField(targetSec, /provincia/i) || findField(null, /provincia/i);
+        lblName = ubigeoResult.isFactura ? "Provincia (Factura)" : "Provincia";
+      } else if (item.type === "distrito") {
+        f = findField(targetSec, /distrito/i) || findField(null, /distrito/i);
+        lblName = ubigeoResult.isFactura ? "Distrito (Factura)" : "Distrito";
+      } else if (item.type === "pais") {
+        f = findField(targetSec, /pa[ií]s/i) || findField(null, /pa[ií]s/i);
+        lblName = ubigeoResult.isFactura ? "País (Factura)" : "País";
+      }
+
+      if (f) {
+        state.pending.set(f.id, { valor: item.val, label: lblName, field: f });
+        state.lockedFields.add(f.id);
+        addedLabels.push(`${lblName}: "${item.val}"`);
+      }
+    }
+
+    if (addedLabels.length > 0) {
+      renderPending();
+      speak("Listo.");
+      setStatus(`Campos listos: ${addedLabels.join(" | ")}. Di "confirmar" para llenar en Smile.`);
+      return;
+    }
+  }
+
   // COMANDOS DIRIGIDOS ESPECÍFICAMENTE A LA SECCIÓN FACTURA
   // Desambigua campos duplicados: Calle, No. Exterior, País, Departamento, Provincia, Distrito, Correo, Documento, Tipo Identificación
   // ante dictados como: "edita calle de factura", "dentro de factura edita calle", "en factura edita país",
@@ -2519,18 +2568,69 @@ async function apply() {
   }
 
   const ok = [], fail = [];
-  for (const [frameId, items] of byFrame) {
-    // Activar Aplica antes de escribir el detalle, incluso al rectificar una propuesta previa.
-    items.sort((a, b) => Number(Boolean(a.dependsOn)) - Number(Boolean(b.dependsOn)));
-    try {
-      const [r] = await chrome.scripting.executeScript({
-        target: { tabId: state.tab.id, frameIds: [frameId] },
-        func: dentaiFill,
-        args: [items],
-      });
-      (r.result || []).forEach((x, i) => (x.ok ? ok : fail).push({ ...x, id: items[i].id }));
-    } catch (e) {
-      items.forEach((i) => fail.push({ id: i.id, motivo: e.message }));
+  for (const [frameId, allItems] of byFrame) {
+    // Orden de aplicación estricto:
+    // 1. Desactivar "Los datos son iguales a la dirección" (para desbloquear los campos de Factura)
+    // 2. Dependencias de Anamnesis (Aplica antes de detalle)
+    // 3. Cascada Ubigeo: País -> Departamento -> Provincia -> Distrito
+    // 4. Otros campos
+    function getItemPriority(item) {
+      const lbl = (item.etiqueta || "").toLowerCase();
+      const name = (item.name || "").toLowerCase();
+      if (/igual.*direc/i.test(lbl) || /igual.*direc/i.test(name)) return 1;
+      if (/pa[ií]s/i.test(lbl) || /pa[ií]s/i.test(name)) return 10;
+      if (/departamento|depa/i.test(lbl) || /departamento|depa/i.test(name)) return 20;
+      if (/provincia/i.test(lbl) || /provincia/i.test(name)) return 30;
+      if (/distrito/i.test(lbl) || /distrito/i.test(name)) return 40;
+      if (item.dependsOn) return 80; // Detalle condicional de Anamnesis va después de su selector Aplica
+      return 50;
+    }
+    allItems.sort((a, b) => getItemPriority(a) - getItemPriority(b));
+
+    // Si hay campos que requieren cascada AJAX en Smile (País -> Departamento -> Provincia -> Distrito)
+    // o desbloqueo previo de Factura ("Los datos son iguales a la dirección: No"):
+    // ejecutarlos por etapas dando tiempo a que Smile responda al evento change y cargue los selectores dependientes.
+    const hasCascade = allItems.some(i => getItemPriority(i) <= 40);
+
+    const stages = [];
+    if (hasCascade) {
+      const stageMap = new Map();
+      for (const it of allItems) {
+        const p = getItemPriority(it);
+        if (!stageMap.has(p)) stageMap.set(p, []);
+        stageMap.get(p).push(it);
+      }
+      const sortedPriorities = Array.from(stageMap.keys()).sort((a, b) => a - b);
+      for (const p of sortedPriorities) {
+        stages.push(stageMap.get(p));
+      }
+    } else {
+      stages.push(allItems);
+    }
+
+    for (let sIdx = 0; sIdx < stages.length; sIdx++) {
+      const stageItems = stages[sIdx];
+      try {
+        const [r] = await chrome.scripting.executeScript({
+          target: { tabId: state.tab.id, frameIds: [frameId] },
+          func: dentaiFill,
+          args: [stageItems],
+        });
+        (r.result || []).forEach((x, i) => (x.ok ? ok : fail).push({ ...x, id: stageItems[i].id }));
+      } catch (e) {
+        stageItems.forEach((i) => fail.push({ id: i.id, motivo: e.message }));
+      }
+
+      // Si aún quedan etapas y la etapa actual era desbloqueo de factura o selector padre de Ubigeo,
+      // esperar a que Smile realice el render / AJAX de opciones dependientes.
+      if (sIdx < stages.length - 1) {
+        const p = getItemPriority(stageItems[0]);
+        if (p === 1) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } else if (p === 20 || p === 30) {
+          await new Promise((resolve) => setTimeout(resolve, 450));
+        }
+      }
     }
   }
 
