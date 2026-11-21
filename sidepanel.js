@@ -828,8 +828,8 @@ function findField(secPattern, etPattern) {
       const idNorm = norm(f.domId);
       const phNorm = norm(f.placeholder);
 
-      // Si se busca Calle, descartar terminantemente campos de No. Exterior
-      if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
+      // Si se busca Calle, descartar terminantemente radios y campos de No. Exterior o "iguales a la dirección"
+      if (isCalleSearch && (f.tipo === "radio" || /igual.*direc/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
         return false;
       }
 
@@ -846,7 +846,7 @@ function findField(secPattern, etPattern) {
     const idNorm = norm(f.domId);
     const phNorm = norm(f.placeholder);
 
-    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
+    if (isCalleSearch && (f.tipo === "radio" || /igual.*direc/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
       return false;
     }
 
@@ -861,7 +861,7 @@ function findField(secPattern, etPattern) {
     const idNorm = norm(f.domId);
     const phNorm = norm(f.placeholder);
 
-    if (isCalleSearch && (/exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
+    if (isCalleSearch && (f.tipo === "radio" || /igual.*direc/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(nameNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(phNorm))) {
       return false;
     }
 
@@ -1228,7 +1228,7 @@ async function processText(rawText) {
     let f = null;
     switch (facFieldCmd.type) {
       case "calle":
-        f = findField(/factura/i, /^calle$|calle(?!.*ext)|direcci[oó]n(?!.*ext)/i);
+        f = findField(/factura/i, /^calle$|calle(?!.*ext)/i) || findField(/factura/i, /calle/i);
         break;
       case "exterior":
         f = findField(/factura/i, /exterior|no\.\s*exterior|num_ext|numext/i);
@@ -1456,7 +1456,7 @@ async function processText(rawText) {
         cleanVal = cleanVal.replace(/\D/g, "") || cleanVal;
         labelName = "Documento (Factura)";
       } else if (/calle|direcci[oó]n/i.test(fieldType)) {
-        targetFacturaField = findField(/factura/i, /^calle$|calle(?!.*ext)|direcci[oó]n(?!.*ext)/i);
+        targetFacturaField = findField(/factura/i, /^calle$|calle(?!.*ext)/i) || findField(/factura/i, /calle/i);
         labelName = "Calle (Factura)";
       } else if (/exterior|vivienda|n[uú]mero/i.test(fieldType)) {
         targetFacturaField = findField(/factura/i, /exterior|no\.\s*exterior|num_ext|numext/i);

@@ -289,8 +289,9 @@ function dentaiScan(anamnesisFields = []) {
       /describa/i.test(labelFor(el) || el.name || "")
     );
     const isImc = isExamenClinico && /imc/i.test(labelFor(el) || el.name || "");
-    // Los detalles condicionales e IMC deben poder proponerse antes de activar su selector.
-    if (el.disabled || (el.readOnly && !isImc) || (!visible(el) && !anamnesisField?.dependsOn && !isExamenConditional)) continue;
+    const isFacturaField = /factura/i.test(sectionOf(el) || "") || /factura/i.test(el.name || "") || /factura/i.test(el.id || "");
+    // Los detalles condicionales, Factura e IMC deben poder proponerse antes de activar su selector.
+    if ((el.disabled && !isFacturaField) || (el.readOnly && !isImc && !isFacturaField) || (!visible(el) && !anamnesisField?.dependsOn && !isExamenConditional && !isFacturaField)) continue;
 
     let key, entry;
     el.setAttribute("data-dentai-id", "tmp");
@@ -422,6 +423,8 @@ function dentaiFill(items) {
   }
 
   function setNative(el, v) {
+    if (el.disabled) el.disabled = false;
+    if (el.readOnly) el.readOnly = false;
     const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype
       : el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;

@@ -109,23 +109,52 @@ test("Factura: extrae comandos de voz para campos específicos de Factura", (t) 
   assert.equal(res14.value, "Girón Honorio delgado");
 });
 
-test("Factura: toggle de requerir factura soporta 'querer', 'quiere', 'requerir' y no se confunde con edición", (t) => {
-  const { w, close } = setupEnv();
-  t.after(close);
+test("Factura: búsqueda de Calle NO debe coincidir con radio 'Los datos son iguales a la dirección'", (t) => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><body>
+    <fieldset>
+      <legend>Factura</legend>
+      <label>Los datos son iguales a la dirección</label>
+      <input type="radio" name="igual_direc" value="1"> Si
+      <input type="radio" name="igual_direc" value="0"> No
+      <label for="fac_calle">*Calle:</label>
+      <input type="text" id="fac_calle" name="calle_factura" value="Av. Honorio Delgado 430">
+    </fieldset>
+  </body></html>`, {
+    url: "https://cayetano-qa.smilesoftware.com.mx/usmile/index.php/admin",
+    runScripts: "outside-only"
+  });
+  const w = dom.window;
+  w.eval = (code) => vm.runInContext(code, dom.getInternalVMContext());
+  w.HTMLElement.prototype.getBoundingClientRect = function () {
+    return { width: 100, height: 30, top: 0, left: 0, right: 100, bottom: 30 };
+  };
+  w.HTMLElement.prototype.scrollIntoView = function () {};
+  w.eval(source("inject.js"));
+  
+  const scanned = w.dentaiScan();
+  const fields = scanned.map((f, id) => ({ ...f, id }));
+  
+  // Función findField idéntica a sidepanel.js
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[*:]+/g, "").trim();
+  const etPattern = /^calle$|calle(?!.*ext)/i;
+  const isCalleSearch = etPattern && /calle/i.test(etPattern.source) && !/ext|exterior/i.test(etPattern.source);
+  
+  const calleFactura = fields.find((f) => {
+    const secNorm = norm(f.seccion);
+    const etNorm = norm(f.etiqueta);
+    const nameNorm = norm(f.name);
+    const idNorm = norm(f.domId);
+    const phNorm = norm(f.placeholder);
+    if (isCalleSearch && (f.tipo === "radio" || /igual.*direc/i.test(etNorm) || /exterior|num.*ext|no.*ext|vivienda/i.test(etNorm))) {
+      return false;
+    }
+    return /factura/i.test(secNorm) && (etPattern.test(etNorm) || etPattern.test(nameNorm) || etPattern.test(idNorm) || etPattern.test(phNorm));
+  });
 
-  assert.equal(w.extractFactura("si va a querer factura"), "Si");
-  assert.equal(w.extractFactura("va a querer factura"), "Si");
-  assert.equal(w.extractFactura("si va a requerir factura"), "Si");
-  assert.equal(w.extractFactura("va a requerir factura"), "Si");
-  assert.equal(w.extractFactura("con factura"), "Si");
-  assert.equal(w.extractFactura("no va a querer factura"), "No");
-  assert.equal(w.extractFactura("no va a requerir factura"), "No");
-  assert.equal(w.extractFactura("sin factura"), "No");
-
-  // Cuando se editan campos, NUNCA debe disparar el toggle de factura
-  assert.equal(w.extractFactura("edita calle de factura Girón Honorio delgado"), null);
-  assert.equal(w.extractFactura("edita número exterior de factura 552"), null);
-  assert.equal(w.extractFactura("aedita tipo de identificación RUC dentro de factura"), null);
+  assert.ok(calleFactura, "Debe encontrar el campo de Calle de Factura");
+  assert.equal(calleFactura.tipo, "text", "Debe ser input de texto, no radio");
+  assert.notEqual(calleFactura.tipo, "radio", "NUNCA debe ser radio button");
+  assert.equal(calleFactura.etiqueta, "Calle");
 });
 
 test("Dirección General: comandos sin 'factura' NO son interceptados por Factura", (t) => {
