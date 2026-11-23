@@ -130,6 +130,8 @@ function initWebSpeech() {
     updatePulseBadge(false, state.paused);
     if (ev.error === "not-allowed") {
       banner(`Permiso de micrófono requerido. <a href="mic.html" target="_blank" style="text-decoration:underline;font-weight:bold;">Conceder permiso aquí ↗</a>`, "err");
+    } else if (ev.error === "audio-capture") {
+      banner(`No se detectó audio en el micrófono. Verifica que el micrófono USB esté encendido (luz azul fija) y seleccionado en chrome://settings/content/microphone`, "err");
     } else if (ev.error !== "aborted") {
       setTimeout(() => {
         startListening();
@@ -144,6 +146,21 @@ function initWebSpeech() {
       startListening();
     }, 200);
   };
+
+  // Escuchar conexión y desconexión de micrófonos USB (como Hippo M31)
+  if (typeof navigator !== "undefined" && navigator.mediaDevices && !state.hasDeviceChangeListener) {
+    state.hasDeviceChangeListener = true;
+    navigator.mediaDevices.addEventListener("devicechange", () => {
+      console.log("DentAI: Cambio de dispositivo de audio detectado (USB/Bluetooth). Reiniciando escucha...");
+      if (state.recognition) {
+        try { state.recognition.abort(); } catch (e) {}
+      }
+      setTimeout(() => {
+        initWebSpeech();
+        startListening();
+      }, 400);
+    });
+  }
 
   state.recognition = r;
   return true;
