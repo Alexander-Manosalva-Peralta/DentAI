@@ -14,7 +14,7 @@
   body {
     font-family: Arial, Helvetica, sans-serif;
     color: #111;
-    line-height: 1.26;
+    line-height: 1.28;
     margin: 0;
     padding: 0;
     font-size: 8.7pt;
@@ -31,6 +31,9 @@
     width: 100%;
     border-collapse: collapse;
     border: 1.5px solid #000;
+  }
+  thead {
+    display: table-row-group !important;
   }
   tr {
     page-break-inside: avoid !important;
@@ -77,12 +80,10 @@
 <h1>ANEXO 3. PROYECTO DE INNOVACIÓN EN SALUD</h1>
 
 <table>
-  <thead>
+  <tbody>
     <tr>
       <th colspan="2" class="header-row">INFORMACIÓN DEL PROYECTO</th>
     </tr>
-  </thead>
-  <tbody>
     <tr>
       <td class="label-col">Nombre del proyecto de innovación</td>
       <td class="content-col">
@@ -95,7 +96,7 @@
         <p>DentAI es una solución médica y tecnológica pionera desarrollada como una extensión para Google Chrome (Manifest V3) que transforma la interacción en el box odontológico en una experiencia 100% libre de contacto físico (Zero-Touch).</p>
         <p>Combina Inteligencia Artificial Generativa y Modelos de Lenguaje de Gran Escala (LLM Google Gemini 1.5) con un motor determinista neuro-simbólico de validación clínica y manipulación directa del DOM (Document Object Model).</p>
         <p>El sistema se acopla de manera no invasiva sobre el software oficial de gestión clínica Smile. A través de reconocimiento de voz continuo en tiempo real (ASR con Web Speech API y algoritmos de normalización fonética clínica), el asistente interpreta el lenguaje médico natural dictado por el odontólogo o estudiante (datos de filiación, DNI, dirección, facturación, odontograma y antecedentes), aísla el ruido ambiental de turbinas y piezas de mano (hasta 75 dB), valida simbólicamente la integridad de los datos (aislamiento estricto entre campos de facturación y dirección, formato de DNI de 8 dígitos, corrección fonética de nombres propios) e inyecta la información de forma instantánea en los campos correspondientes sin necesidad de tocar el teclado ni el ratón. Asimismo, proporciona retroalimentación auditiva inmediata mediante síntesis de voz (TTS) y un Hero Orb visual interactivo con estados de escucha activa estilo Apple.</p>
-        <p><strong>Conectividad a Base de Datos Institucional, Ciberseguridad y Protección de Datos (Cumplimiento DTI UPCH y Ley N° 29733):</strong> El sistema implementa una estricta política de Cero Persistencia Local (RAM-Only). Los datos sensibles del paciente (DNI, nombres, diagnósticos) nunca se guardan en el disco duro ni en el almacenamiento persistente (localStorage/cookies) del navegador de cada box; residen únicamente en la memoria volátil de la sesión activa y se purgan de inmediato tras la confirmación de inyección en Smile. Para el despliegue en múltiples boxes sin exigir claves API a los operadores ni exponer credenciales, la extensión se conecta a un Backend Gateway Institucional centralizado en la Intranet de la UPCH, el cual custodia la clave máster de IA y gestiona de forma segura el pool de conexiones hacia la Base de Datos Central de Pacientes de la universidad.</p>
+        <p><strong>Consulta de Identidad (RENIEC / Base Institucional) y Protección de Datos (Ley N° 29733):</strong> Para la admisión de pacientes nuevos, el odontólogo o estudiante únicamente dicta el número de DNI. El sistema realiza una consulta automática a través del servicio oficial de RENIEC (o la base de datos de la clínica) para autocompletar de forma inmediata nombres, apellidos y datos de filiación, eliminando errores de digitación y agilizando la atención. En estricto cumplimiento de la Ley N° 29733 de Protección de Datos Personales, la información sensible del paciente se procesa únicamente en la memoria temporal durante la sesión y jamás se almacena en el disco duro de la computadora del box, garantizando la total privacidad y confidencialidad médica.</p>
       </td>
     </tr>
     <tr>
@@ -115,19 +116,18 @@
         <p>• <strong>Reducción Mayor al 70% en el Tiempo de Registro:</strong> Disminuye el tiempo de llenado y admisión de 15 minutos a menos de 7 minutos por paciente, incrementando la productividad clínica y docente.</p>
         <p>• <strong>Arquitectura Neuro-Simbólica con Cero Alucinación Clínica:</strong> Combina la adaptabilidad del LLM para interpretar lenguaje médico natural con guardias deterministas que auditan y verifican cada dato antes de inyectarlo en Smile, garantizando 100% de confiabilidad.</p>
         <p>• <strong>Integración No Invasiva (Zero-Friction):</strong> Se implementa como una capa de asistencia en el navegador de los equipos clínicos sin requerir modificaciones en el código de Smile ni incurrir en costos de licenciamiento o APIs propietarias.</p>
-        <p>• <strong>Conexión Directa a la Base de Datos Central de la Clínica:</strong> Búsqueda y recuperación instantánea de historias clínicas y datos de pacientes registrados mediante la base de datos institucional de la universidad.</p>
-        <p>• <strong>Gestión Centralizada de Claves API y Despliegue Zero-Config en Boxes:</strong> Los operadores y alumnos en los boxes no requieren ingresar claves API personales; el servidor central de la universidad procesa las peticiones de forma transparente, segura y controlada.</p>
+        <p>• <strong>Consulta Automática de Identidad (RENIEC / Base Clínica):</strong> Al dictar el DNI, recupera al instante la información oficial de filiación del paciente, previniendo errores de escritura y reduciendo la carga administrativa en admisión.</p>
+        <p>• <strong>Gestión Centralizada y Despliegue Zero-Config en Boxes:</strong> Los operadores y alumnos en los boxes no requieren ingresar claves API personales; el servidor central de la universidad procesa las peticiones de forma transparente, segura y controlada.</p>
         <p>• <strong>Accesibilidad Multimodal y Ergonomía del Box:</strong> Control de navegación por voz («ve a Preregistro», «sube a Factura»), retroalimentación por voz sintetizada y un componente visual dinámico de escucha activa.</p>
-        <p>• <strong>Blindaje de Ciberseguridad y Protección de Datos Sensibles (Cumplimiento DTI & Ley N° 29733):</strong> Arquitectura blindada contra robo de datos en reposo e intercepción de red. Al no almacenar datos en localStorage y operar bajo el sandbox de Chrome MV3 (Content Security Policy y Isolated Worlds), ningún malware o usuario externo puede extraer información clínica de los pacientes atendidos.</p>
+        <p>• <strong>Protección de Datos y Confidencialidad Médica (Ley N° 29733):</strong> La información clínica y personal nunca queda guardada en las computadoras de los consultorios. Los datos se procesan de forma transitoria y segura, protegiendo la identidad y confidencialidad médica de cada paciente atendido.</p>
       </td>
     </tr>
     <tr>
       <td class="label-col">Número de integrantes</td>
       <td class="content-col">
-        <p><strong>3 integrantes:</strong></p>
-        <p>• <strong>1 Investigador Principal / Desarrollador</strong> (Estudiante Tesista Pregrado, Facultad de Estomatología UPCH): Johan Alexander Manosalva Peralta.</p>
-        <p>• <strong>1 Docente Asesor Clínico</strong> (Profesor Ordinario / Contratado, Facultad de Estomatología UPCH).</p>
-        <p>• <strong>1 Co-investigador / Asesor Tecnológico</strong> (Especialista en Inteligencia Artificial e Informática Biomédica).</p>
+        <p>• Miguel Saravia Rojas</p>
+        <p>• Noe Benjamin Bazan Lavanda</p>
+        <p>• Manosalva Peralta Yojan Alexander</p>
       </td>
     </tr>
   </tbody>
