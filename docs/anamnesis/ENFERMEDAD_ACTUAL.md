@@ -1,6 +1,6 @@
 # Anamnesis: A - Enfermedad actual
 
-Primera etapa en `feat/anamnesis-voz-nlp`, basada en el HTML de Smile QA compartido el 12/11/2026. Las secciones B (Funciones bio), C (Cuestionario) y D (Antecedentes personales) se trabajarán después.
+Primera etapa en `feat/anamnesis-voz-nlp`, basada en el HTML de Smile QA compartido el 12/11/2026. Las secciones B a E y el catálogo CIE están documentados en [Comandos completos de Anamnesis](COMANDOS_COMPLETOS.md).
 
 ## Campos reales
 

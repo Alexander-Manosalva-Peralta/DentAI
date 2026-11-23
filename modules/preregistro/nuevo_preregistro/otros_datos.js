@@ -16,8 +16,9 @@ function extractComoSeEntero(text) {
 
   if (/\bfacebook\b/i.test(normT)) return "FACEBOOK";
   if (/\binstagram\b/i.test(normT)) return "INSTAGRAM";
-  if (/\btiktok\b/i.test(normT)) return "TIKTOK";
-  if (/\brecomendaci[oó]n|recomendado|amigo|familiar\b/i.test(normT)) return "RECOMENDACION";
+  if (/\btik\s*tok\b/i.test(normT)) return "TIK TOK";
+  if (/\bamig[oa]s?\s+y\s+familiares?|familiares?\s+y\s+amig[oa]s?|amig[oa]s?|familiar(?:es)?\b/i.test(normT)) return "AMIGOS Y FAMILIARES";
+  if (/\brecomendaci[oó]n|recomendado\b/i.test(normT)) return "RECOMENDACION";
   if (/\bp[aá]gina\s*web|web|internet\b/i.test(normT)) return "PAGINA WEB";
   if (/\bradio\b/i.test(normT)) return "RADIO";
   if (/\btelevisi[oó]n|tele|tv\b/i.test(normT)) return "TELEVISION";

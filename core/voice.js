@@ -88,7 +88,11 @@ function initWebSpeech() {
     if (final) {
       // ANTI-ECO TOTAL:
       // 1. Si el asistente está hablando activamente por los altavoces, ignorar cualquier audio captado por el micrófono
-      if (state.isSpeakingTTS) {
+      const questionShortcut = typeof anamnesisQuestionShortcut === "function"
+        && anamnesisQuestionShortcut(final) !== null
+        && state.fields.some((f) => f.contexto === "anamnesis")
+        && !state.anamnesisAwaiting?.literal && !state.anamnesisAwaiting?.numeric;
+      if (state.isSpeakingTTS && !questionShortcut) {
         console.log("Anti-echo: Audio captado mientras el asistente habla -> descartado:", final.trim());
         return;
       }
@@ -110,7 +114,8 @@ function initWebSpeech() {
       if (timeSinceSpeech < 1500) {
         if (/^(?:abierto|seleccionado|listo|anotado|llenado|borrado|abriendo|guardando|formulario limpio|error)\.?$/i.test(cleanFinal) ||
             cleanFinal === state.speakingText ||
-            (state.speakingText && (cleanFinal.includes(state.speakingText) || state.speakingText.includes(cleanFinal)))) {
+            (cleanFinal.length >= 12 && cleanFinal.split(/\s+/).length >= 3 && state.speakingText
+              && (cleanFinal.includes(state.speakingText) || state.speakingText.includes(cleanFinal)))) {
           console.log("Anti-echo: Descartado eco residual de TTS ->", final.trim());
           return;
         }

@@ -55,7 +55,7 @@ async function scan() {
     const res = await chrome.scripting.executeScript({
       target: { tabId: state.tab.id, allFrames: true },
       func: dentaiScan,
-      args: [ANAMNESIS_ACTUAL_FIELDS],
+      args: [typeof ANAMNESIS_FIELDS !== "undefined" ? ANAMNESIS_FIELDS : ANAMNESIS_ACTUAL_FIELDS],
     });
     const all = [];
     let n = 0;
@@ -956,30 +956,39 @@ async function processText(rawText) {
   }
 
   // Anamnesis tiene prioridad sobre navegación y Gemini para conservar el relato literal.
-  const anamnesis = proposeAnamnesisActual(text, state.fields, state.anamnesisAwaiting);
+  const anamnesis = typeof proposeAnamnesis === "function"
+    ? proposeAnamnesis(text, state.fields, state.anamnesisAwaiting, state.anamnesisSelection, state.pending)
+    : (typeof proposeAnamnesisActual === "function" ? proposeAnamnesisActual(text, state.fields, state.anamnesisAwaiting) : { handled: false });
   if (anamnesis.handled) {
-    if (anamnesis.awaiting || anamnesis.errors.length) {
-      const context = state.fields.find((f) => f.contexto === "anamnesis");
-      state.anamnesisAwaiting = { ...anamnesis.target, pagina: context.pagina, frameId: context.frameId, expiresAt: Date.now() + 60000 };
-    }
-    if (anamnesis.awaiting) {
-      renderPending();
-      setStatus(`${anamnesis.awaiting.label} seleccionado. Ahora dicta el valor, por ejemplo: "el valor dolor de muelas".`);
-      speak("Dicta el valor.");
+    const context = state.fields.find((f) => f.contexto === "anamnesis");
+    if (anamnesis.selection?.kind === "question" && anamnesis.selection.number !== state.anamnesisSelection?.number && $("result")) $("result").innerHTML = "";
+    if (anamnesis.selection) state.anamnesisSelection = { ...anamnesis.selection, pagina: context.pagina, frameId: context.frameId, expiresAt: Date.now() + 120000 };
+    if (anamnesis.action) {
+      state.anamnesisAwaiting = null;
+      await runAnamnesisAction(anamnesis.action, context);
       return;
+    }
+    if (anamnesis.awaiting || anamnesis.errors.length) {
+      state.anamnesisAwaiting = { ...anamnesis.target, pagina: context.pagina, frameId: context.frameId, expiresAt: Date.now() + 60000 };
     }
     if (anamnesis.errors.length) {
       setStatus(anamnesis.errors.join(" "));
       speak("Revisa el valor.");
       return;
     }
-    state.anamnesisAwaiting = null;
     for (const [id, pending] of state.pending) {
       if (pending.field?.contexto === "anamnesis" && anamnesis.remove.includes(pending.field.name)) state.pending.delete(id);
     }
     for (const { field, valor } of anamnesis.entries) {
-      state.pending.set(`anamnesis:${field.frameId}:${field.name}`, { valor, label: field.etiqueta, field });
+      state.pending.set(`anamnesis:${field.frameId}:${field.domId || field.name}`, { valor, label: field.etiqueta, field });
     }
+    if (anamnesis.awaiting) {
+      renderPending();
+      setStatus(`${anamnesis.awaiting.label} seleccionado. Ahora dicta el valor. ${anamnesis.awaiting.prompt || 'Por ejemplo: "el valor dolor de muelas".'}`);
+      speak("Dicta el valor.");
+      return;
+    }
+    state.anamnesisAwaiting = null;
     renderPending();
     speak("Listo.");
     setStatus('Anamnesis lista en la propuesta. Revisa los datos y di "confirmar" para llenar Smile.');
@@ -988,6 +997,15 @@ async function processText(rawText) {
   if (state.anamnesisAwaiting) {
     state.anamnesisAwaiting = null;
     renderPending();
+  }
+  if (!/^(?:confirmar|confirmado|aplicar|aplicalo)(?:\s+datos)?$/i.test(normRaw)) state.anamnesisSelection = null;
+
+  // Los catálogos CIE cargan opciones después de elegir tipo y clasificación.
+  if (/^(?:actualiza|actualizar|refresca|refrescar|escanear|escanea)\s+(?:los\s+)?campos(?:\s+del\s+formulario)?$/i.test(normRaw)) {
+    await scan();
+    setStatus("Campos actualizados. Puedes dictar la siguiente opción del formulario.");
+    speak("Campos actualizados.");
+    return;
   }
 
   // 0. EXAMEN CLÍNICO (PRIORIDAD LOCAL / NLP CLÍNICO UPCH)
@@ -1328,7 +1346,7 @@ async function processText(rawText) {
   }
 
   // ACCIONES DIRECTAS DE FACTURACIÓN Y CHECKBOXES RÁPIDOS (TOGGLES SÍ/NO)
-  const facDirect = extractFactura(text);
+  const facDirect = typeof extractFactura === "function" ? extractFactura(text) : null;
   if (facDirect) {
     const f = findField(/factura/i, /factura/i) || findField(null, /factura/i);
     if (f) {
@@ -2379,7 +2397,7 @@ async function processText(rawText) {
   }
 
   // --- PASO 13: FACTURA ---
-  const facVal = extractFactura(text);
+  const facVal = typeof extractFactura === "function" ? extractFactura(text) : null;
   if (facVal) {
     const facField = findField(/factura/i, /factura/i) || findField(null, /factura/i);
     if (facField) {
@@ -2497,6 +2515,13 @@ function renderPending() {
       : "Esperando dictado (ej: “DNI 72 73 62 89”, “fecha de nacimiento 22 02 2006”)…";
   } else {
     box.className = "";
+    const selected = state.anamnesisAwaiting || (state.anamnesisSelection?.kind === "question" ? state.anamnesisSelection : null);
+    if (selected) {
+      const hint = document.createElement("div");
+      hint.className = "item";
+      hint.textContent = `${selected.label} seleccionado. ${selected.prompt || "Dicta el valor."}`;
+      box.appendChild(hint);
+    }
   }
 
   for (const [id, v] of state.pending) {
@@ -2519,10 +2544,33 @@ function renderPending() {
 function discard() {
   state.pending.clear();
   state.anamnesisAwaiting = null;
+  state.anamnesisSelection = null;
   if (state.lockedFields) state.lockedFields.clear();
   state.currentPatient = null;
   if ($("result")) $("result").innerHTML = "";
   renderPending();
+}
+
+async function runAnamnesisAction(action, context) {
+  if (action.type === "save" && Array.from(state.pending.values()).some((p) => p.field?.scope === "diagnostico")) {
+    setStatus('Revisa y di "confirmar" para llenar la propuesta del diagnóstico antes de guardarlo.');
+    return;
+  }
+  if (!(await checkSite())) return;
+  try {
+    const [response] = await chrome.scripting.executeScript({
+      target: { tabId: state.tab.id, frameIds: [context.frameId] },
+      func: dentaiAnamnesisAction,
+      args: [action, context.pagina],
+    });
+    setStatus(response.result?.message || "No se pudo completar la acción del diagnóstico.");
+    if (response.result?.ok) {
+      speak(action.type === "open" ? "Abierto." : "Listo.");
+      await scan();
+    } else speak("Revisa el bloque.");
+  } catch (error) {
+    setStatus(`No se pudo abrir el diagnóstico: ${error.message}`);
+  }
 }
 
 /* ---------- Aplicar datos en Smile ---------- */
@@ -2564,6 +2612,11 @@ async function apply() {
       contexto: f.contexto,
       pagina: f.pagina,
       dependsOn: f.dependsOn,
+      dependsValue: f.dependsValue,
+      dependsOnId: f.dependsOnId,
+      dependsChecked: f.dependsChecked,
+      optionValue: f.optionValue,
+      scope: f.scope,
     });
   }
 

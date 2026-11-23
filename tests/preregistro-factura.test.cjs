@@ -23,6 +23,7 @@ function setupEnv() {
   w.HTMLElement.prototype.scrollIntoView = function () {};
   w.eval(source("modules/preregistro/nuevo_preregistro/factura.js"));
   w.eval(source("modules/preregistro/nuevo_preregistro/direccion.js"));
+  w.eval(source("modules/preregistro/nuevo_preregistro/otros_datos.js"));
   w.eval(source("inject.js"));
   return { w, close: () => w.close() };
 }
@@ -320,4 +321,45 @@ test("Ubigeo Cascada: aplicación por etapas da tiempo a que Smile pueble opcion
   const resDist = w.dentaiFill([{ key: "k_dist", valor: "CAJAMARCA", etiqueta: "Distrito" }]);
   assert.ok(resDist[0].ok);
   assert.equal(distSelect.value, "060101");
+});
+
+test("Otros Datos: Cómo se enteró distingue Amigos y familiares, Recomendación y TIK TOK", (t) => {
+  const { w, close } = setupEnv();
+  t.after(close);
+
+  // 1. Detección en otros_datos.js
+  assert.equal(w.extractComoSeEntero("cómo se enteró mediante amigos y familiares"), "AMIGOS Y FAMILIARES");
+  assert.equal(w.extractComoSeEntero("cómo se enteró amigos y familiares"), "AMIGOS Y FAMILIARES");
+  assert.equal(w.extractComoSeEntero("se enteró por un amigo"), "AMIGOS Y FAMILIARES");
+  assert.equal(w.extractComoSeEntero("cómo se enteró por recomendación"), "RECOMENDACION");
+  assert.equal(w.extractComoSeEntero("cómo se enteró mediante tiktok"), "TIK TOK");
+  assert.equal(w.extractComoSeEntero("cómo se enteró por tik tok"), "TIK TOK");
+
+  // 2. Selección en DOM con dentaiFill para dropdown de Smile
+  const doc = w.document;
+  doc.body.innerHTML = `
+    <select id="como_entero" data-dentai-key="k_entero">
+      <option value="">::seleccione::</option>
+      <option value="1">FACEBOOK</option>
+      <option value="2">INSTAGRAM</option>
+      <option value="3">TIK TOK</option>
+      <option value="4">AMIGOS Y FAMILIARES</option>
+      <option value="5">RECOMENDACION</option>
+    </select>
+  `;
+
+  const select = doc.getElementById("como_entero");
+
+  // Dictado TIKTOK (sin espacio) o TIK TOK (con espacio) selecciona la opción 3 "TIK TOK"
+  const fill1 = w.dentaiFill([{ key: "k_entero", valor: "TIKTOK", etiqueta: "Cómo se enteró" }]);
+  assert.ok(fill1[0].ok);
+  assert.equal(select.value, "3");
+
+  const fill2 = w.dentaiFill([{ key: "k_entero", valor: "AMIGOS Y FAMILIARES", etiqueta: "Cómo se enteró" }]);
+  assert.ok(fill2[0].ok);
+  assert.equal(select.value, "4");
+
+  const fill3 = w.dentaiFill([{ key: "k_entero", valor: "RECOMENDACION", etiqueta: "Cómo se enteró" }]);
+  assert.ok(fill3[0].ok);
+  assert.equal(select.value, "5");
 });

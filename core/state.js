@@ -16,6 +16,7 @@ window.DentAIState = {
   discoveredTabs: [],      // pestañas/módulos detectados en Smile
   pending: new Map(),      // fieldId -> { valor, label }
   anamnesisAwaiting: null, // Campo nombrado sin valor; espera la siguiente intervención durante un minuto.
+  anamnesisSelection: null, // Contexto de pregunta, función biológica, hábito o familiar para descripciones sucesivas.
   lockedFields: new Set(), // IDs de campos rectificados manualmente (protegidos contra sobreescritura de DNI)
   currentPatient: null,    // Datos del paciente activo
   queue: Promise.resolve(),
